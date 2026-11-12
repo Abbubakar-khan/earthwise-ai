@@ -15,6 +15,15 @@ from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
 
+
+@st.cache_data(ttl=24 * 60 * 60, show_spinner=False)
+def retrieve_climate_data(city, latitude, longitude, start_date, end_date, variable):
+    """Cache successful NASA POWER requests for 24 hours to keep repeat visits fast."""
+    return fetch_daily(
+        city, latitude, longitude, start_date, end_date, parameters=(variable,)
+    )
+
+
 st.set_page_config(
     page_title="EARTHWISE AI | Pakistan Earth Intelligence",
     page_icon="🌍",
@@ -100,9 +109,20 @@ with st.sidebar:
     st.divider()
     st.markdown("### Location")
     province = st.selectbox("Province / Region", provinces)
-    city_options = sorted([c for c, v in REGIONS.items() if province == "All regions" or v["province"] == province])
-    city = st.selectbox("City", city_options, index=city_options.index("Lahore") if "Lahore" in city_options else 0)
+    city_options = sorted([
+        c for c, v in REGIONS.items()
+        if province == "All regions" or v["province"] == province
+    ])
+    city_search = st.text_input("Find a city", placeholder="Search by city name…")
+    if city_search.strip():
+        city_options = [c for c in city_options if city_search.casefold() in c.casefold()]
+    if not city_options:
+        st.warning("No matching city in the current directory. Try another spelling or region.")
+        st.stop()
+    default_city = "Lahore" if "Lahore" in city_options else city_options[0]
+    city = st.selectbox("City", city_options, index=city_options.index(default_city))
     st.caption(f"{REGIONS[city]['province']} · {REGIONS[city]['latitude']:.4f}° N, {REGIONS[city]['longitude']:.4f}° E")
+    st.caption(f"Directory: {len(REGIONS)} mapped urban centres · PBS Census 2023 records 657 urban localities nationally.")
     st.divider()
     st.markdown("### Climate signal")
     variable = st.selectbox("Indicator", list(VARIABLES), format_func=lambda k: f"{VARIABLES[k]['label']} · {VARIABLES[k]['unit']}")
@@ -121,8 +141,10 @@ if fetch:
     with st.status("Connecting to NASA POWER…", expanded=True) as status:
         try:
             st.write("Requesting daily climate records.")
-            df_new, metadata = fetch_daily(city, coords["latitude"], coords["longitude"],
-                f"{int(start_year)}0101", f"{int(end_year)}1231", parameters=(variable,))
+            df_new, metadata = retrieve_climate_data(
+                city, coords["latitude"], coords["longitude"],
+                f"{int(start_year)}0101", f"{int(end_year)}1231", variable
+            )
             slug = f"{city.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{variable.lower()}"
             csv_path, meta_path = save_city_data(df_new, metadata, slug)
             st.session_state.frames[(city, variable)] = df_new
