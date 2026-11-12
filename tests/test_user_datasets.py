@@ -82,3 +82,16 @@ def test_database_configuration_is_explicit(monkeypatch):
     with pytest.raises(DatasetStorageError, match="not configured"):
         from src.user_datasets import list_datasets
         list_datasets(create_workspace_token())
+
+def test_parse_json_column_oriented_object():
+    frame = parse_uploaded_file(
+        "series.json",
+        b'{"city": ["Peshawar", "Lahore"], "temperature": [20, 29]}',
+    )
+    assert len(frame) == 2
+    assert list(frame["city"]) == ["Peshawar", "Lahore"]
+
+
+def test_reject_duplicate_csv_headers():
+    with pytest.raises(UploadValidationError, match="unique"):
+        parse_uploaded_file("duplicate.csv", b"Temperature,temperature\\n20,21\\n")
