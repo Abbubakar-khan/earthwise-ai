@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
-from datetime import date
+import json
+from datetime import date, timedelta
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -8,12 +9,108 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.regions import REGIONS, VARIABLES
 from src.nasa_power import fetch_daily, save_city_data
 from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
+from src.live_weather import get_current_conditions
+
+
+def render_earth_globe():
+    """Render an interactive textured 3D Earth with mapped Pakistan city markers."""
+    points = [
+        {"name": name, "lat": info["latitude"], "lng": info["longitude"],
+         "province": info["province"]}
+        for name, info in REGIONS.items()
+    ]
+    city_data = json.dumps(points)
+    html = """<!doctype html><html><head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+        html,body{margin:0;background:#06111d;color:#dff7ff;font-family:Arial,sans-serif;overflow:hidden}
+        #globe{width:100%;height:530px;cursor:grab}
+        .hint{position:absolute;left:18px;bottom:12px;font-size:11px;letter-spacing:.08em;color:#91b6c9;pointer-events:none}
+        .load{position:absolute;inset:0;display:grid;place-items:center;color:#8ceafa;font-size:13px;letter-spacing:.12em}
+      </style></head><body>
+      <div id="globe"><div class="load" id="load">INITIALIZING EARTH VISUALIZATION…</div></div>
+      <div class="hint">DRAG TO ROTATE · SCROLL TO ZOOM · HOVER OVER PINS</div>
+      <script src="https://unpkg.com/globe.gl"></script>
+      <script>
+      const cityPoints = __CITY_DATA__;
+      const el = document.getElementById('globe');
+      try {
+        const globe = Globe()(el)
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+          .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+          .backgroundColor('#06111d')
+          .showAtmosphere(true)
+          .atmosphereColor('#55c9ed')
+          .atmosphereAltitude(0.16)
+          .pointsData(cityPoints)
+          .pointLat(d => d.lat)
+          .pointLng(d => d.lng)
+          .pointColor(d => d.name === 'Pakistan' ? '#f7d46a' : '#6ce7f4')
+          .pointAltitude(0.018)
+          .pointRadius(0.12)
+          .pointResolution(12)
+          .pointsMerge(true)
+          .pointLabel(d => '<b>' + d.name + '</b><br/>' + d.province)
+          .width(el.clientWidth)
+          .height(530);
+        globe.pointOfView({lat:29.5,lng:69.5,altitude:2.05},1200);
+        globe.controls().autoRotate = true;
+        globe.controls().autoRotateSpeed = 0.28;
+        globe.controls().enableDamping = true;
+        document.getElementById('load').remove();
+        window.addEventListener('resize', () => globe.width(el.clientWidth));
+      } catch (e) {
+        document.getElementById('load').textContent = '3D GLOBE COULD NOT LOAD — CHECK NETWORK ACCESS';
+      }
+      </script></body></html>"""
+    components.html(html.replace("__CITY_DATA__", city_data), height=550, scrolling=False)
+
+
+def render_nasa_satellite_map(imagery_date):
+    """Show NASA GIBS daily satellite true-colour imagery with city overlays."""
+    points = [
+        {"name": name, "lat": info["latitude"], "lng": info["longitude"],
+         "province": info["province"]}
+        for name, info in REGIONS.items()
+    ]
+    city_data = json.dumps(points)
+    html = """<!doctype html><html><head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+      <style>html,body,#map{height:100%;margin:0;background:#071522}
+      .leaflet-container{font-family:Arial,sans-serif}
+      .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1d2d;color:#eaf8ff}
+      .leaflet-control-attribution{font-size:10px}</style></head><body>
+      <div id="map"></div>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <script>
+      const points = __CITY_DATA__;
+      const map = L.map('map',{zoomControl:true,worldCopyJump:true}).setView([29.5,69.5],5);
+      L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/__DATE__/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{
+        maxZoom:9,
+        attribution:'Imagery: NASA/GSFC/ESDIS GIBS · VIIRS SNPP Corrected Reflectance True Color'
+      }).addTo(map);
+      const pins = L.featureGroup();
+      points.forEach(p => {
+        L.circleMarker([p.lat,p.lng],{radius:5,color:'#b7f6ff',weight:1,fillColor:'#35cce8',fillOpacity:.9})
+          .bindPopup('<b>'+p.name+'</b><br>'+p.province)
+          .addTo(pins);
+      });
+      pins.addTo(map);
+      L.control.scale({imperial:false}).addTo(map);
+      </script></body></html>"""
+    components.html(
+        html.replace("__CITY_DATA__", city_data).replace("__DATE__", imagery_date.isoformat()),
+        height=570, scrolling=False
+    )
+
 
 
 @st.cache_data(ttl=24 * 60 * 60, show_spinner=False)
@@ -163,21 +260,63 @@ if df is None:
         if variable in cached.columns:
             df = cached
 
-st.markdown('<div class="ew-section">Explore Pakistan</div>', unsafe_allow_html=True)
-map_df = pd.DataFrame([{"City": name, "Province": info["province"], "Latitude": info["latitude"], "Longitude": info["longitude"], "Selected": "Selected location" if name == city else "Other city"} for name, info in REGIONS.items()])
-map_fig = px.scatter_geo(map_df, lat="Latitude", lon="Longitude", color="Selected", hover_name="City",
-    hover_data={"Province": True, "Latitude": ':.3f', "Longitude": ':.3f', "Selected": False},
-    color_discrete_map={"Selected location": "#6ce7f4", "Other city": "#4d8dff"})
-map_fig.update_geos(scope="asia", projection_type="natural earth", center={"lat": 29.5, "lon": 69.5},
-    lataxis_range=[23, 38], lonaxis_range=[60, 78], showland=True, landcolor="#10283b",
-    showocean=True, oceancolor="#071522", showcountries=True, countrycolor="#31536b",
-    showcoastlines=True, coastlinecolor="#31536b", showframe=False, bgcolor="rgba(0,0,0,0)")
-map_fig.update_traces(marker=dict(size=7, opacity=.85, line=dict(width=.7, color="#c9f8ff")))
-map_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(color="#a9c2d5", family="DM Sans"), margin=dict(l=0,r=0,t=8,b=0),
-    height=390, legend=dict(orientation="h",y=1.05,x=0))
-st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
-st.caption(f"City directory: {len(REGIONS)} major urban centres across all provinces and administrative regions. Points show approximate city-centre coordinates.")
+st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_allow_html=True)
+globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  3D Earth", "🛰️  NASA Satellite", "📍  Pakistan Cities"])
+with globe_tab:
+    st.caption("Interactive textured Earth · City markers · Drag to rotate and scroll to zoom")
+    render_earth_globe()
+    st.caption("Earth texture is a visual basemap. City markers use approximate city-centre coordinates; this is not a live satellite video feed.")
+with satellite_tab:
+    imagery_date = st.date_input(
+        "Satellite imagery date",
+        value=date.today() - timedelta(days=2),
+        min_value=date(2012, 1, 1),
+        max_value=date.today(),
+        help="NASA VIIRS imagery is a daily satellite composite. The newest date may not yet be processed."
+    )
+    st.caption("NASA GIBS · VIIRS Suomi-NPP corrected reflectance true-colour imagery · Daily composite, not live video")
+    render_nasa_satellite_map(imagery_date)
+    st.caption("Imagery can be affected by cloud cover, acquisition gaps, and processing delay. Source: NASA GIBS.")
+with cities_tab:
+    map_df = pd.DataFrame([{"City": name, "Province": info["province"], "Latitude": info["latitude"], "Longitude": info["longitude"], "Selected": "Selected location" if name == city else "Other city"} for name, info in REGIONS.items()])
+    map_fig = px.scatter_geo(map_df, lat="Latitude", lon="Longitude", color="Selected", hover_name="City",
+        hover_data={"Province": True, "Latitude": ':.3f', "Longitude": ':.3f', "Selected": False},
+        color_discrete_map={"Selected location": "#6ce7f4", "Other city": "#4d8dff"})
+    map_fig.update_geos(scope="asia", projection_type="natural earth", center={"lat": 29.5, "lon": 69.5},
+        lataxis_range=[23, 38], lonaxis_range=[60, 78], showland=True, landcolor="#10283b",
+        showocean=True, oceancolor="#071522", showcountries=True, countrycolor="#31536b",
+        showcoastlines=True, coastlinecolor="#31536b", showframe=False, bgcolor="rgba(0,0,0,0)")
+    map_fig.update_traces(marker=dict(size=7, opacity=.85, line=dict(width=.7, color="#c9f8ff")))
+    map_fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#a9c2d5", family="DM Sans"), margin=dict(l=0,r=0,t=8,b=0),
+        height=390, legend=dict(orientation="h",y=1.05,x=0))
+    st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+    st.caption(f"Directory: {len(REGIONS)} mapped urban centres across Pakistan. Coordinates are approximate city-centre points.")
+
+st.markdown('<div class="ew-section">Current conditions</div>', unsafe_allow_html=True)
+st.caption(f"{city} · Model-based latest conditions · Cached for 15 minutes · Not a station observation")
+refresh_col, source_col = st.columns([1, 3])
+with refresh_col:
+    refresh_weather = st.button("↻  Refresh conditions", use_container_width=True)
+if refresh_weather:
+    get_current_conditions.clear()
+try:
+    weather = get_current_conditions(
+        REGIONS[city]["latitude"], REGIONS[city]["longitude"], city
+    )
+    wx1, wx2, wx3, wx4 = st.columns(4)
+    wx1.metric("Air temperature", f"{weather['temperature_2m']:.1f} °C",
+               f"Feels like {weather.get('apparent_temperature', float('nan')):.1f} °C")
+    wx2.metric("Humidity", f"{weather['relative_humidity_2m']:.0f}%")
+    wx3.metric("Wind speed", f"{weather['wind_speed_10m']:.1f} km/h")
+    wx4.metric("Precipitation", f"{weather['precipitation']:.1f} mm")
+    st.caption(
+        f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover', '—')}% · "
+        f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
+        "Source: Open-Meteo forecast models"
+    )
+except Exception as exc:
+    st.warning(f"Current conditions are temporarily unavailable: {exc}")
 
 if df is None:
     st.markdown('<div class="ew-section">Your climate workspace</div>', unsafe_allow_html=True)
