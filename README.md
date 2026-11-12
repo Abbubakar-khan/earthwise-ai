@@ -9,7 +9,9 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 - Searchable directory of 101 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
 - PBS 2023 Census reference: [National Census Report](https://www.pbs.gov.pk/sites/default/files/population/2023/reports/National%20Census%20Report-2023.pdf) and [Table 2 — Urban Localities](https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_2_national.pdf).
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
-- Province/region filtering, searchable-by-region city selection, and an interactive Pakistan city map.
+- Province/region filtering, searchable city selection, an interactive Pakistan map, and a textured, rotatable 3D Earth globe with city markers.
+- NASA GIBS VIIRS Suomi-NPP corrected-reflectance true-colour daily satellite imagery, date-selectable and overlaid with Pakistan city markers.
+- Model-based current weather conditions from Open-Meteo (temperature, apparent temperature, humidity, wind, precipitation and cloud cover), refreshed on demand and cached for 15 minutes.
 - Refined English-language mission-control interface with responsive layout, subtle motion, hover states, animated status indicator, and reduced-motion accessibility.
 - Historical date-range selection and NASA POWER API retrieval.
 - Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
@@ -23,6 +25,8 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 - The simple Kendall trend test does not correct for monthly seasonality or serial autocorrelation. Interpret p-values cautiously.
 - The AI explanation is based on computed trend fields; it should not be treated as an independent scientific validation.
 - Data availability and completeness depend on NASA POWER. Recent dates may be incomplete.
+- Open-Meteo current conditions are model-based estimates, not guaranteed local weather-station observations or emergency-grade warnings. The provider timestamp and source are displayed in the app; requests are cached for 15 minutes. See [Open-Meteo documentation](https://open-meteo.com/en/docs).
+- NASA GIBS VIIRS imagery is a satellite-derived daily composite, not live video. Cloud cover, acquisition gaps and processing latency can affect the image. See [NASA GIBS access documentation](https://nasa-gibs.github.io/gibs-api-docs/access-basics/).
 
 ## Run locally
 
@@ -70,4 +74,4 @@ The app fetches NASA POWER data when a user presses the fetch button, so the dep
 
 ## Roadmap (not yet implemented)
 
-Interactive 3D globe, satellite imagery layers, earthquake/fire/flood monitoring, forecast feeds, historical city comparisons, and future climate scenarios are planned modules. The current interface's animated system status is a visual UI indicator, not a claim of live environmental telemetry. They must be integrated with clear source attribution and uncertainty labels before being presented as operational features.
+Earthwise now includes a 3D globe, NASA GIBS satellite imagery and model-based current weather. Earthquake/fire/flood alert feeds, validated full PBS urban-locality coverage, multi-city comparisons, rigorous seasonal trend methods and future climate scenarios remain planned modules. The animated system status is a visual UI indicator, not a claim of live environmental telemetry.
