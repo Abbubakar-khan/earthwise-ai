@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 import json
+import os
 from datetime import date, timedelta
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -316,12 +317,12 @@ try:
     st.caption(
         f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover', '—')}% · "
         f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
-        f"Source: {weather['source']} · Open-Meteo"
+        f"Source: {weather['source']} · [Open-Meteo](https://open-meteo.com/)"
     )
 except Exception as exc:
     st.warning(f"Current conditions are temporarily unavailable: {exc}")
 
-if not __import__("os").getenv("OPEN_METEO_API_KEY"):
+if not os.getenv("OPEN_METEO_API_KEY"):
     st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 
 if df is None:
