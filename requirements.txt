@@ -1,10 +1,9 @@
-# Compatible dependency ranges for the Streamlit 1.40.x MVP.
-# These constraints allow pip to resolve older Python environments (including Python 3.8)
-# instead of forcing newer pandas/numpy/scipy/plotly releases.
-streamlit>=1.40,<1.41
-pandas>=1.5.3,<2.3
-numpy>=1.24,<2.0
-requests>=2.31,<3
-scipy>=1.10,<1.13
-plotly>=5.18,<5.22
-pytest>=7,<9
+# Python 3.14-compatible deployment dependencies for Streamlit Community Cloud.
+# These versions have prebuilt wheels for current Community Cloud Python runtimes.
+streamlit==1.66.0
+pandas>=2.3.3,<4
+numpy>=2.3,<2.7
+requests>=2.32,<3
+scipy>=1.18.1,<2
+plotly>=6,<7
+pytest>=8,<10
