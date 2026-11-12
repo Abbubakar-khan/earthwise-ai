@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -19,6 +20,11 @@ from src.statistics import analyze_trend
 from src.ai_engine import explain_result
 from src.live_weather import get_current_conditions, commercial_api_configured
 from src.ai_assistant import assistant_configured, ask_earthwise
+from src.user_datasets import (
+    DatasetStorageError, UploadValidationError, create_workspace_token,
+    database_configured, delete_dataset, list_datasets, load_dataset,
+    parse_uploaded_file, save_dataset, validate_workspace_token,
+)
 
 
 # ---------------------------------------------------------------------
@@ -77,43 +83,6 @@ def render_globe(selected_city: str):
       #load{position:absolute;inset:0;display:grid;place-items:center;color:#8ceafa;font-size:13px;letter-spacing:.1em}
       .hint{position:absolute;left:18px;bottom:12px;font-size:11px;letter-spacing:.08em;color:#91b6c9;pointer-events:none}
     
-/* Product polish: stronger hierarchy, consistent surfaces, and responsive controls */
-:root{color-scheme:dark;--bg:#071321;--panel:#0d2031;--line:rgba(153,194,219,.16);--cyan:#58d5e7;--muted:#91aabd;--white:#f3f8fc;--amber:#ffbd72}
-.stApp{background:radial-gradient(ellipse at 86% 0%,rgba(36,139,168,.16),transparent 31%),radial-gradient(ellipse at 0% 60%,rgba(39,83,139,.10),transparent 38%),#071321}
-.block-container{max-width:1480px;padding-top:1.1rem}
-[data-testid="stSidebar"]{min-width:285px!important;background:linear-gradient(180deg,#0d2031 0%,#091725 100%)}
-[data-testid="stSidebar"] [data-testid="stRadio"] label{font-size:.88rem;font-weight:600}
-[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"]{gap:5px}
-[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label{padding:8px 10px;border:1px solid transparent;border-radius:9px;transition:background .18s ease,border-color .18s ease}
-[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:rgba(62,174,199,.12);border-color:rgba(88,213,231,.25)}
-.ew-top{padding:5px 2px 13px;border-bottom:1px solid rgba(153,194,219,.10);margin-bottom:18px}
-.ew-brand{font-size:.78rem;letter-spacing:.16em}
-.ew-status{background:rgba(20,95,112,.18);border-color:rgba(88,213,231,.24);white-space:nowrap}
-.ew-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:clamp(25px,4vw,42px);background:linear-gradient(118deg,rgba(12,43,62,.98),rgba(9,29,47,.98) 58%,rgba(12,47,62,.94));box-shadow:0 18px 50px rgba(0,0,0,.13);margin-bottom:25px}
-.ew-hero:after{right:-70px;top:-190px;width:380px;height:380px;border-color:rgba(88,213,231,.13);box-shadow:0 0 0 34px rgba(88,213,231,.025),0 0 0 72px rgba(88,213,231,.016)}
-.ew-title{font-size:clamp(2.15rem,4.8vw,3.35rem);max-width:740px}
-.ew-sub{max-width:680px}
-.ew-hero-aside{position:relative;z-index:1;min-width:190px;padding:17px 19px;border:1px solid rgba(130,205,220,.19);border-radius:14px;background:rgba(4,19,32,.42);backdrop-filter:blur(8px)}
-.ew-hero-aside-label{font-size:.61rem;letter-spacing:.16em;color:#83dce8;font-weight:700}
-.ew-hero-aside-value{font:600 1.05rem 'Space Grotesk';color:#f2fbff;margin-top:8px}
-.ew-hero-aside-note{font-size:.7rem;color:#9bb7c8;margin-top:5px;line-height:1.5}
-.ew-section{display:flex;align-items:center;gap:10px;margin:1.2rem 0 .55rem}
-.ew-section:before{content:'';display:block;width:3px;height:17px;border-radius:5px;background:linear-gradient(180deg,#67e0e9,#3b91bd)}
-.ew-card{box-shadow:0 10px 28px rgba(0,0,0,.10);transition:transform .18s ease,border-color .18s ease}
-.ew-card:hover{transform:translateY(-2px);border-color:rgba(88,213,231,.28)}
-div[data-testid="stMetric"]{min-height:112px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
-div[data-testid="stMetricLabel"] p{font-size:.72rem;letter-spacing:.035em}
-div[data-testid="stMetricValue"]{font-size:1.65rem}
-[data-testid="stTabs"] button{font-weight:600}
-[data-testid="stTabs"] button[aria-selected="true"]{color:#70e0eb!important;border-bottom-color:#58d5e7!important}
-[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-[data-testid="stChatMessage"]{padding:14px 16px}
-[data-testid="stChatInput"] textarea{background:rgba(7,20,34,.85)}
-[data-testid="stSelectbox"] label,[data-testid="stDateInput"] label,[data-testid="stRadio"] label{color:#c5d7e4}
-.stCaption{color:#8faabd}
-.ew-footer{border-top:1px solid rgba(153,194,219,.10);line-height:1.9}
-@media(max-width:850px){.ew-hero{grid-template-columns:1fr}.ew-hero-aside{max-width:280px}.ew-status{font-size:.58rem}}
-@media(max-width:560px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{padding:23px 19px}.ew-hero-aside{width:100%;max-width:none}.ew-title{font-size:2.05rem}}
 </style></head><body>
     <div id="globe"><div id="load">LOADING EARTH VISUALIZATION…</div></div>
     <div class="hint">DRAG TO ROTATE · SCROLL TO ZOOM · SELECTED CITY HIGHLIGHTED</div>
@@ -261,6 +230,43 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Product polish: stronger hierarchy, consistent surfaces, and responsive controls */
+:root{color-scheme:dark;--bg:#071321;--panel:#0d2031;--line:rgba(153,194,219,.16);--cyan:#58d5e7;--muted:#91aabd;--white:#f3f8fc;--amber:#ffbd72}
+.stApp{background:radial-gradient(ellipse at 86% 0%,rgba(36,139,168,.16),transparent 31%),radial-gradient(ellipse at 0% 60%,rgba(39,83,139,.10),transparent 38%),#071321}
+.block-container{max-width:1480px;padding-top:1.1rem}
+[data-testid="stSidebar"]{min-width:285px!important;background:linear-gradient(180deg,#0d2031 0%,#091725 100%)}
+[data-testid="stSidebar"] [data-testid="stRadio"] label{font-size:.88rem;font-weight:600}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"]{gap:5px}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label{padding:8px 10px;border:1px solid transparent;border-radius:9px;transition:background .18s ease,border-color .18s ease}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:rgba(62,174,199,.12);border-color:rgba(88,213,231,.25)}
+.ew-top{padding:5px 2px 13px;border-bottom:1px solid rgba(153,194,219,.10);margin-bottom:18px}
+.ew-brand{font-size:.78rem;letter-spacing:.16em}
+.ew-status{background:rgba(20,95,112,.18);border-color:rgba(88,213,231,.24);white-space:nowrap}
+
+
+.ew-title{font-size:clamp(2.15rem,4.8vw,3.35rem);max-width:740px}
+.ew-sub{max-width:680px}
+.ew-hero-aside{position:relative;z-index:1;min-width:190px;padding:17px 19px;border:1px solid rgba(130,205,220,.19);border-radius:14px;background:rgba(4,19,32,.42);backdrop-filter:blur(8px)}
+.ew-hero-aside-label{font-size:.61rem;letter-spacing:.16em;color:#83dce8;font-weight:700}
+.ew-hero-aside-value{font:600 1.05rem 'Space Grotesk';color:#f2fbff;margin-top:8px}
+.ew-hero-aside-note{font-size:.7rem;color:#9bb7c8;margin-top:5px;line-height:1.5}
+.ew-section{display:flex;align-items:center;gap:10px;margin:1.2rem 0 .55rem}
+.ew-section:before{content:'';display:block;width:3px;height:17px;border-radius:5px;background:linear-gradient(180deg,#67e0e9,#3b91bd)}
+.ew-card{box-shadow:0 10px 28px rgba(0,0,0,.10);transition:transform .18s ease,border-color .18s ease}
+.ew-card:hover{transform:translateY(-2px);border-color:rgba(88,213,231,.28)}
+div[data-testid="stMetric"]{min-height:112px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+div[data-testid="stMetricLabel"] p{font-size:.72rem;letter-spacing:.035em}
+div[data-testid="stMetricValue"]{font-size:1.65rem}
+[data-testid="stTabs"] button{font-weight:600}
+[data-testid="stTabs"] button[aria-selected="true"]{color:#70e0eb!important;border-bottom-color:#58d5e7!important}
+[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+[data-testid="stChatMessage"]{padding:14px 16px}
+[data-testid="stChatInput"] textarea{background:rgba(7,20,34,.85)}
+[data-testid="stSelectbox"] label,[data-testid="stDateInput"] label,[data-testid="stRadio"] label{color:#c5d7e4}
+.stCaption{color:#8faabd}
+.ew-footer{border-top:1px solid rgba(153,194,219,.10);line-height:1.9}
+@media(max-width:850px){.ew-hero{grid-template-columns:1fr}.ew-hero-aside{max-width:280px}.ew-status{font-size:.58rem}}
+@media(max-width:560px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{padding:23px 19px}.ew-hero-aside{width:100%;max-width:none}.ew-title{font-size:2.05rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -273,6 +279,8 @@ if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 if "weather_cache_local" not in st.session_state:
     st.session_state.weather_cache_local = {}
+if "workspace_token" not in st.session_state:
+    st.session_state.workspace_token = create_workspace_token()
 
 # ---------------------------------------------------------------------
 # Sidebar: navigation + global controls
@@ -594,13 +602,182 @@ elif page == "Earth Explorer":
 # ---------------------------------------------------------------------
 elif page == "Data Library":
     st.markdown('<div class="ew-section">Data Library</div>', unsafe_allow_html=True)
-    st.markdown('<div class="ew-muted">Inspect and export the exact dataset loaded for the selected city, indicator and period.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ew-muted">Upload, validate, privately store and revisit your own environmental datasets. '
+        'CSV, Excel and JSON files are supported.</div>',
+        unsafe_allow_html=True,
+    )
+
+    workspace_token = st.session_state.workspace_token
+    with st.expander("Private workspace recovery key", expanded=False):
+        st.warning(
+            "This key grants access to every dataset saved in this workspace. "
+            "Copy it somewhere private. Anyone who has it can open or delete these uploads."
+        )
+        st.code(workspace_token, language=None)
+        recovery_key = st.text_input(
+            "Open an existing workspace with its recovery key",
+            type="password",
+            key="workspace_recovery_input",
+            placeholder="Paste your ew1_ recovery key",
+        )
+        if st.button("Open saved workspace", key="open_saved_workspace"):
+            if validate_workspace_token(recovery_key.strip()):
+                st.session_state.workspace_token = recovery_key.strip()
+                st.session_state.pop("pending_user_upload", None)
+                st.session_state.pop("saved_dataset_preview", None)
+                st.success("Workspace key accepted.")
+                st.rerun()
+            else:
+                st.error("That recovery key is not valid. Check that you copied the complete key.")
+
+    st.markdown('<div class="ew-section">Upload a dataset</div>', unsafe_allow_html=True)
+    if not database_configured():
+        st.warning(
+            "Permanent uploads need a PostgreSQL database. The upload interface is ready, "
+            "but saving is disabled until the database connection is configured."
+        )
+        st.code(
+            'EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"',
+            language="toml",
+        )
+        st.caption(
+            "Create a hosted PostgreSQL database (for example, with Neon or Supabase), "
+            "then add its private connection string in Streamlit Cloud → App settings → Secrets. "
+            "Never put database credentials in GitHub or in this page."
+        )
+    else:
+        uploaded_file = st.file_uploader(
+            "Choose CSV, Excel or JSON",
+            type=["csv", "xlsx", "xls", "xlsm", "json"],
+            max_upload_size=15,
+            help="Maximum 15 MB, 100,000 rows and 100 columns. Excel imports the first worksheet.",
+        )
+        upload_fingerprint = None
+        if uploaded_file is not None:
+            raw_upload = uploaded_file.getvalue()
+            upload_fingerprint = hashlib.sha256(raw_upload).hexdigest()
+            st.caption(f"{uploaded_file.name} · {len(raw_upload) / (1024 * 1024):.2f} MB")
+            if st.button("Validate file and preview", type="secondary", key="validate_user_upload"):
+                try:
+                    validated_frame = parse_uploaded_file(uploaded_file.name, raw_upload)
+                    st.session_state.pending_user_upload = {
+                        "fingerprint": upload_fingerprint,
+                        "filename": uploaded_file.name,
+                        "data": validated_frame,
+                    }
+                    st.success("File validation passed. Review the preview before saving.")
+                except UploadValidationError as exc:
+                    st.session_state.pop("pending_user_upload", None)
+                    st.error(str(exc))
+                except Exception:
+                    st.session_state.pop("pending_user_upload", None)
+                    st.error("The file could not be validated. Check its format and try again.")
+
+        pending = st.session_state.get("pending_user_upload")
+        if pending and pending.get("fingerprint") == upload_fingerprint:
+            preview = pending["data"]
+            metric1, metric2, metric3 = st.columns(3)
+            metric1.metric("Validated rows", f"{len(preview):,}")
+            metric2.metric("Columns", f"{len(preview.columns):,}")
+            metric3.metric("Missing cells", f"{int(preview.isna().sum().sum()):,}")
+            st.caption("Preview · first 20 rows")
+            st.dataframe(preview.head(20), use_container_width=True, hide_index=True)
+            if st.button("Save permanently to my workspace", type="primary", key="save_user_upload"):
+                try:
+                    with st.spinner("Saving your dataset to secure persistent storage…"):
+                        stored_id = save_dataset(
+                            st.session_state.workspace_token,
+                            pending["filename"],
+                            preview,
+                        )
+                    st.session_state.pop("pending_user_upload", None)
+                    st.session_state.pop("saved_dataset_preview", None)
+                    st.success(f"Dataset saved successfully · Reference {stored_id}")
+                    st.rerun()
+                except DatasetStorageError as exc:
+                    st.error(str(exc))
+        elif pending:
+            st.session_state.pop("pending_user_upload", None)
+
+    st.markdown('<div class="ew-section">My saved datasets</div>', unsafe_allow_html=True)
+    saved_datasets = []
+    if database_configured():
+        try:
+            saved_datasets = list_datasets(st.session_state.workspace_token)
+            if saved_datasets:
+                st.dataframe(
+                    pd.DataFrame([
+                        {
+                            "File": item["filename"],
+                            "Format": item["format"],
+                            "Rows": item["rows"],
+                            "Uploaded (UTC)": item["uploaded_at"],
+                        }
+                        for item in saved_datasets
+                    ]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                dataset_options = {item["id"]: item for item in saved_datasets}
+                selected_saved_id = st.selectbox(
+                    "Select a saved dataset",
+                    list(dataset_options),
+                    format_func=lambda key: (
+                        f'{dataset_options[key]["filename"]} · '
+                        f'{dataset_options[key]["rows"]:,} rows · {dataset_options[key]["format"]}'
+                    ),
+                    key="selected_saved_dataset_id",
+                )
+                action_col1, action_col2 = st.columns(2)
+                with action_col1:
+                    if st.button("Open selected dataset", use_container_width=True):
+                        try:
+                            selected_frame = load_dataset(
+                                st.session_state.workspace_token, selected_saved_id
+                            )
+                            st.session_state.saved_dataset_preview = {
+                                "id": selected_saved_id,
+                                "data": selected_frame,
+                            }
+                        except DatasetStorageError as exc:
+                            st.error(str(exc))
+                with action_col2:
+                    if st.button("Delete selected dataset", use_container_width=True):
+                        try:
+                            if delete_dataset(st.session_state.workspace_token, selected_saved_id):
+                                st.session_state.pop("saved_dataset_preview", None)
+                                st.success("Dataset deleted from this workspace.")
+                                st.rerun()
+                            else:
+                                st.warning("That dataset was not found in this workspace.")
+                        except DatasetStorageError as exc:
+                            st.error(str(exc))
+                saved_preview = st.session_state.get("saved_dataset_preview")
+                if saved_preview and saved_preview.get("id") == selected_saved_id:
+                    st.markdown("#### Saved dataset preview")
+                    saved_frame = saved_preview["data"]
+                    st.caption(f'{len(saved_frame):,} rows · {len(saved_frame.columns):,} columns')
+                    st.dataframe(saved_frame, use_container_width=True, hide_index=True, height=420)
+                    st.download_button(
+                        "Download saved dataset (CSV)",
+                        saved_frame.to_csv(index=False),
+                        f'{dataset_options[selected_saved_id]["filename"]}.csv',
+                        "text/csv",
+                    )
+            else:
+                st.info("No saved uploads in this workspace yet. Validate a file above to get started.")
+        except DatasetStorageError as exc:
+            st.error(str(exc))
+    else:
+        st.caption("Saved datasets will appear here after PostgreSQL storage is connected.")
+
+    st.markdown('<div class="ew-section">NASA POWER research dataset</div>', unsafe_allow_html=True)
     if df is None:
-        render_empty_state()
-        st.info("Retrieve a dataset from the sidebar to inspect its records and metadata.")
+        st.info("No NASA POWER dataset is loaded for the current sidebar selection.")
     else:
         st.markdown(f"**{city} · {VARIABLES[variable]['label']} · {start_year}–{end_year}**")
-        st.dataframe(df, use_container_width=True, hide_index=True, height=420)
+        st.dataframe(df, use_container_width=True, hide_index=True, height=360)
         st.download_button(
             "Download daily source data (CSV)", df.to_csv(index=False),
             f"{city.lower().replace(' ', '_')}_{variable.lower()}_{start_year}_{end_year}_daily.csv",
@@ -614,7 +791,7 @@ elif page == "Data Library":
                 f"{city.lower().replace(' ', '_')}_{variable.lower()}_{start_year}_{end_year}_monthly.csv",
                 "text/csv",
             )
-        with st.expander("Dataset metadata"):
+        with st.expander("NASA POWER dataset metadata"):
             st.json(metadata)
 
 # ---------------------------------------------------------------------
