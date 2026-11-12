@@ -352,7 +352,7 @@ spec = VARIABLES[variable]
 analysis_unit = "mm/month" if variable == "PRECTOTCORR" else spec["unit"]
 
 st.markdown(f'<div class="ew-section">{city} <span style="color:#6ce7f4">/</span> {spec["label"]}</div>', unsafe_allow_html=True)
-st.caption(f"{REGIONS[city]['province']} · Monthly analysis · {spec['unit']} · {meta['first_date']} to {meta['last_date']}")
+st.caption(f"{REGIONS[city]['province']} · Monthly analysis · {analysis_unit} · {meta['first_date']} to {meta['last_date']}")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Data coverage", f"{meta['coverage_pct']}%")
 m2.metric("Valid daily records", f"{meta['valid_rows']:,}")
