@@ -10,6 +10,7 @@ import io
 import json
 import os
 import secrets
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -171,7 +172,7 @@ def save_dataset(token: str, filename: str, frame: pd.DataFrame) -> str:
     workspace_hash = _workspace_hash(token)
     suffix = Path(filename).suffix.lower()
     records = json.loads(frame.to_json(orient="records", date_format="iso", force_ascii=False))
-    dataset_id = secrets.token_hex(16)
+    dataset_id = str(uuid.uuid4())
     try:
         with _connect() as connection:
             _ensure_table(connection)
