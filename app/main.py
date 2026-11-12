@@ -178,6 +178,13 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 .stTabs [aria-selected="true"]{color:#8ceafa!important}
 [data-testid="stExpander"]{border:1px solid var(--line);border-radius:13px;background:rgba(9,25,41,.55)}
 .stAlert{border-radius:12px}
+.ew-ai-card{border:1px solid rgba(102,227,242,.24);border-radius:18px;background:linear-gradient(135deg,rgba(13,43,61,.92),rgba(8,22,38,.96));padding:20px 22px;box-shadow:0 14px 40px rgba(0,0,0,.16);position:relative;overflow:hidden}
+.ew-ai-card:before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,#74efff,#4b83ff)}
+.ew-ai-kicker{color:#70dff0;font-size:.65rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+.ew-ai-heading{font:600 1.22rem 'Space Grotesk';color:#f2fbff;margin:7px 0 5px}
+.ew-ai-description{color:#9eb8ca;font-size:.8rem;line-height:1.6}
+.ew-founder{color:#718da3;font-size:.68rem;letter-spacing:.07em;text-align:center;padding:14px 0 4px}
+.ew-founder strong{color:#a9c5d7;font-weight:600}
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
@@ -370,8 +377,15 @@ with tab_trends:
         p_value=result.get("p_value")
         x3.metric("Kendall p-value",f"{p_value:.4g}" if p_value is not None else "Unavailable")
         x4.metric("Significant at 0.05","Yes" if result["significant_005"] else "No")
-        st.markdown("#### AI Earth Scientist")
+        st.markdown("""
+        <div class="ew-ai-card">
+          <div class="ew-ai-kicker">EARTHWISE INTELLIGENCE · ANALYSIS ENGINE</div>
+          <div class="ew-ai-heading">AI Earth Scientist</div>
+          <div class="ew-ai-description">An evidence-linked interpretation generated from the selected city's calculated climate statistics — not a free-form forecast.</div>
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown(explain_result(city,spec["label"],spec["unit"],result))
+        st.caption("ENGINE OUTPUT · Based on the displayed dataset, Sen's slope and Kendall tau. Review methodology and limitations below.")
     else:
         st.warning(result.get("message","There is not enough data to calculate a reliable trend."))
     with st.expander("Methodology and scientific limitations"):
@@ -392,4 +406,10 @@ with st.expander("Data provenance & coordinates"):
     st.write("**Aggregation:**","Monthly sum of daily values" if spec["aggregation"]=="sum" else "Monthly mean of daily values")
     st.markdown("[NASA POWER API documentation](https://power.larc.nasa.gov/docs/services/api/temporal/daily/)")
 st.divider()
-st.caption("EARTHWISE AI · Pakistan-first Earth intelligence · Historical data retrieval, not a live monitoring service")
+st.markdown("""
+<div class="ew-founder">
+  EARTHWISE AI &nbsp;·&nbsp; PAKISTAN-FIRST EARTH INTELLIGENCE<br>
+  <strong>Created by Muhammad Abbubakar</strong> &nbsp;·&nbsp; Founder
+  <br><span style="opacity:.75">Historical research and data exploration · Not an emergency monitoring service</span>
+</div>
+""", unsafe_allow_html=True)
