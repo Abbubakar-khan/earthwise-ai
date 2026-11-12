@@ -94,4 +94,4 @@ def test_parse_json_column_oriented_object():
 
 def test_reject_duplicate_csv_headers():
     with pytest.raises(UploadValidationError, match="unique"):
-        parse_uploaded_file("duplicate.csv", b"Temperature,temperature\\n20,21\\n")
+        parse_uploaded_file("duplicate.csv", b"Temperature,temperature\n20,21\n")
