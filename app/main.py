@@ -41,7 +41,7 @@ if fetch:
                 f"{int(start_year)}0101", f"{int(end_year)}1231",
                 parameters=(variable,)
             )
-            slug = city.lower().replace(" ", "_")
+            slug = f"{city.lower().replace(' ', '_')}_{variable.lower()}"
             csv_path, meta_path = save_city_data(df, metadata, slug)
             st.session_state.frames[(city, variable)] = df
             st.success(f"Data saved locally: {csv_path}")
@@ -51,7 +51,7 @@ if fetch:
 
 df = st.session_state.frames.get((city, variable))
 if df is None:
-    candidate = Path("data/raw") / f"{city.lower().replace(' ', '_')}_nasa_power_daily.csv"
+    candidate = Path("data/raw") / f"{city.lower().replace(' ', '_')}_{variable.lower()}_nasa_power_daily.csv"
     if candidate.exists():
         cached = pd.read_csv(candidate, parse_dates=["date"])
         if variable in cached.columns:
