@@ -519,12 +519,20 @@ elif page == "AI Earth Scientist":
     st.markdown('<div class="ew-ai-banner"><div class="ew-ai-kicker">EARTHWISE AI · CONVERSATIONAL INTELLIGENCE</div><div class="ew-ai-title">Meet your AI Earth Scientist</div><div class="ew-ai-copy">Ask questions about climate, environmental signals, the selected city, or your retrieved dataset. Answers are instructed to distinguish evidence from uncertainty.</div></div>', unsafe_allow_html=True)
     st.caption(f"Active context: {city}, {REGIONS[city]['province']} · {VARIABLES[variable]['label']} · {start_year}–{end_year}")
     if not assistant_configured():
-        st.warning("Conversational AI is not connected yet. Add your own OpenAI API key to the app's private Secrets to activate it.")
-        st.code('OPENAI_API_KEY = "your-openai-api-key"\nOPENAI_MODEL = "gpt-4.1-mini"', language="toml")
+        st.warning("Conversational AI is not connected yet. Add Neon AI Gateway credentials or an OpenAI fallback key in the app's private Secrets.")
+        st.code(
+            'NEON_AI_GATEWAY_BASE_URL = "https://YOUR-BRANCH-api.ai.YOUR-REGION.aws.neon.tech"\n'
+            'NEON_AI_GATEWAY_TOKEN = "your-neon-scoped-credential"\n'
+            'NEON_AI_MODEL = "gpt-5-mini"\n\n'
+            '# Optional direct OpenAI fallback\n'
+            'OPENAI_API_KEY = "your-openai-api-key"\n'
+            'OPENAI_MODEL = "gpt-4.1-mini"',
+            language="toml",
+        )
         st.markdown("[OpenAI API platform](https://platform.openai.com/api-keys) · [API billing](https://platform.openai.com/settings/organization/billing)")
-        st.caption("Never paste your API key into this chat or commit it to GitHub. Add it only in Streamlit Cloud → App settings → Secrets.")
+        st.caption("Never paste credentials into chat or commit them to GitHub. Add them only in Streamlit Cloud → App settings → Secrets.")
     else:
-        st.success("AI engine connected · Your API key is stored server-side in app Secrets.")
+        st.success("AI engine configured · Provider credentials are read server-side from app Secrets.")
     for message in st.session_state.ai_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
