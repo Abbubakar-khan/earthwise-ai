@@ -9,7 +9,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -281,6 +280,8 @@ with st.sidebar:
     st.caption("HISTORICAL SOURCE · NASA POWER Daily Point API")
     st.caption(f"{len(REGIONS)} mapped urban centres · Not the complete national locality gazetteer")
     st.caption("Modelled/gridded estimates · Not station observations")
+    if not commercial_api_configured():
+        st.caption("Open-Meteo free endpoint: non-commercial evaluation only.")
 
 if retrieve:
     coords = REGIONS[city]
