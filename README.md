@@ -1,51 +1,70 @@
 # EARTHWISE AI — The Intelligent Earth Trend Observatory
-**FORGE CYBER LAB | Pakistan-first | NASA Space Apps 2026**
 
-EARTHWISE AI is a research prototype for exploring environmental time-series, estimating trends, comparing locations, and explaining computed results with transparent caveats.
+**FORGE CYBER LAB | Pakistan-first | Research prototype**
 
-## Important status
-This package is a **reproducible starter implementation**, not proof that all live data have already been downloaded or that every module has been independently validated against ground stations. The app fetches NASA POWER data at runtime. GPM IMERG and MODIS are documented as next-stage integrations; they are not falsely represented as already integrated.
+EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical daily point data from NASA POWER, aggregates the selected variable to monthly values, calculates a simple trend, and provides a cautious plain-language explanation.
 
-## Quick start (Android/mobile)
-You can inspect/edit files on mobile, but running Python + Streamlit locally is awkward. Use **GitHub Codespaces** or **Replit** in your mobile browser:
-1. Create a GitHub repository named `earthwise-ai`.
-2. Upload/extract this ZIP into the repository.
-3. Open the repo in Codespaces (or import into Replit).
-4. In the terminal run:
-   ```bash
-   pip install -r requirements.txt
-   streamlit run app/main.py --server.address 0.0.0.0
-   ```
-5. Open the forwarded Streamlit port (usually 8501).
-6. Select a city, fetch NASA POWER data, then run the trend analysis.
+## Current MVP features
 
-## Local setup
+- Nine Pakistan locations: Islamabad, Lahore, Karachi, Peshawar, Quetta, Faisalabad, Multan, Skardu and Gilgit.
+- Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
+- Historical date-range selection and NASA POWER API retrieval.
+- Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
+- Downloadable monthly CSV and local raw-data/metadata files.
+
+## Important scientific limitations
+
+- NASA POWER point values are gridded satellite/model-assisted estimates, not measurements from a local weather station.
+- This MVP analyzes historical data. It is not a weather forecast, climate projection, or disaster prediction system.
+- Daily precipitation values are summed into monthly totals. Other supported daily variables are averaged into monthly means.
+- The simple Kendall trend test does not correct for monthly seasonality or serial autocorrelation. Interpret p-values cautiously.
+- The AI explanation is based on computed trend fields; it should not be treated as an independent scientific validation.
+- Data availability and completeness depend on NASA POWER. Recent dates may be incomplete.
+
+## Run locally
+
+Python 3.9–3.11 is recommended for this MVP.
+
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app/main.py
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run app/main.py
 ```
 
+Then open the local URL shown in the terminal, normally http://localhost:8501.
+
+On Windows, the Python launcher can be used instead:
+
+```bash
+py -m pip install -r requirements.txt
+py -m streamlit run app/main.py
+```
+
+## Deploy on Streamlit Community Cloud
+
+1. Sign in to Streamlit Community Cloud with the GitHub account that can access this repository.
+2. Create a new app and select repository `Abbubakar-khan/earthwise-ai`.
+3. Select branch `compat/streamlit-launch`.
+4. Set the main file path to `app/main.py`.
+5. Deploy. The first run installs the dependencies and may take several minutes.
+
+The app fetches NASA POWER data when a user presses the fetch button, so the deployed app needs outbound internet access. Do not commit passwords, tokens, or private API keys.
+
 ## Project structure
+
 - `app/main.py`: Streamlit interface
-- `src/nasa_power.py`: NASA POWER daily API client
-- `src/cleaning.py`: validation and monthly aggregation
-- `src/statistics.py`: Mann–Kendall-style Kendall tau test + Sen slope
-- `src/comparisons.py`: multi-location trend table
+- `src/regions.py`: Pakistan city coordinates and supported variables
+- `src/nasa_power.py`: NASA POWER daily API client and local CSV/metadata saving
+- `src/cleaning.py`: missing-value handling and monthly aggregation
+- `src/statistics.py`: Kendall tau and Sen's slope
 - `src/ai_engine.py`: evidence-constrained explanation templates
+- `tests/`: core calculation tests
 - `docs/`: methodology, sources, validation and roadmap
-- `tests/`: automated tests
 
-## Science safeguards
-- POWER point values are gridded/reanalysis-derived products, not local weather-station observations.
-- Temperature and precipitation are analyzed separately.
-- Daily precipitation is summed to monthly totals; daily temperature is averaged to monthly means.
-- Mann–Kendall significance can be affected by seasonality/autocorrelation. The MVP reports a simple Kendall tau p-value and Sen slope; it does **not** claim a seasonality-corrected trend test.
-- A trend is not a forecast, and correlation does not prove causation.
-- Missing/sentinel values are excluded; the app reports coverage.
-- The AI explanation uses only computed result fields; it does not invent causes.
+## Roadmap (not yet implemented)
 
-## Current supported scope
-NASA POWER daily point data for Lahore, Islamabad, Karachi (T2M and PRECTOTCORR). Add other sources only after this core path is stable.
+Interactive 3D globe, satellite imagery layers, earthquake/fire/flood monitoring, forecast feeds, historical city comparisons, and future climate scenarios are planned modules. They must be integrated with clear source attribution and uncertainty labels before being presented as operational features.
