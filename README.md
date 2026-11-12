@@ -26,6 +26,7 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 - The AI explanation is based on computed trend fields; it should not be treated as an independent scientific validation.
 - Data availability and completeness depend on NASA POWER. Recent dates may be incomplete.
 - Open-Meteo current conditions are model-based estimates, not guaranteed local weather-station observations or emergency-grade warnings. The provider timestamp and source are displayed in the app; requests are cached for 15 minutes. See [Open-Meteo documentation](https://open-meteo.com/en/docs).
+- The no-key Open-Meteo endpoint is only for non-commercial evaluation. Before commercial operation, configure the `OPEN_METEO_API_KEY` environment variable using a valid commercial subscription. See [Open-Meteo pricing and commercial terms](https://open-meteo.com/en/pricing). Weather data attribution is required under CC BY 4.0.
 - NASA GIBS VIIRS imagery is a satellite-derived daily composite, not live video. Cloud cover, acquisition gaps and processing latency can affect the image. See [NASA GIBS access documentation](https://nasa-gibs.github.io/gibs-api-docs/access-basics/).
 
 ## Run locally
