@@ -76,7 +76,45 @@ def render_globe(selected_city: str):
       #globe{width:100%;height:520px;position:relative}
       #load{position:absolute;inset:0;display:grid;place-items:center;color:#8ceafa;font-size:13px;letter-spacing:.1em}
       .hint{position:absolute;left:18px;bottom:12px;font-size:11px;letter-spacing:.08em;color:#91b6c9;pointer-events:none}
-    </style></head><body>
+    
+/* Product polish: stronger hierarchy, consistent surfaces, and responsive controls */
+:root{color-scheme:dark;--bg:#071321;--panel:#0d2031;--line:rgba(153,194,219,.16);--cyan:#58d5e7;--muted:#91aabd;--white:#f3f8fc;--amber:#ffbd72}
+.stApp{background:radial-gradient(ellipse at 86% 0%,rgba(36,139,168,.16),transparent 31%),radial-gradient(ellipse at 0% 60%,rgba(39,83,139,.10),transparent 38%),#071321}
+.block-container{max-width:1480px;padding-top:1.1rem}
+[data-testid="stSidebar"]{min-width:285px!important;background:linear-gradient(180deg,#0d2031 0%,#091725 100%)}
+[data-testid="stSidebar"] [data-testid="stRadio"] label{font-size:.88rem;font-weight:600}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"]{gap:5px}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label{padding:8px 10px;border:1px solid transparent;border-radius:9px;transition:background .18s ease,border-color .18s ease}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:rgba(62,174,199,.12);border-color:rgba(88,213,231,.25)}
+.ew-top{padding:5px 2px 13px;border-bottom:1px solid rgba(153,194,219,.10);margin-bottom:18px}
+.ew-brand{font-size:.78rem;letter-spacing:.16em}
+.ew-status{background:rgba(20,95,112,.18);border-color:rgba(88,213,231,.24);white-space:nowrap}
+.ew-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:clamp(25px,4vw,42px);background:linear-gradient(118deg,rgba(12,43,62,.98),rgba(9,29,47,.98) 58%,rgba(12,47,62,.94));box-shadow:0 18px 50px rgba(0,0,0,.13);margin-bottom:25px}
+.ew-hero:after{right:-70px;top:-190px;width:380px;height:380px;border-color:rgba(88,213,231,.13);box-shadow:0 0 0 34px rgba(88,213,231,.025),0 0 0 72px rgba(88,213,231,.016)}
+.ew-title{font-size:clamp(2.15rem,4.8vw,3.35rem);max-width:740px}
+.ew-sub{max-width:680px}
+.ew-hero-aside{position:relative;z-index:1;min-width:190px;padding:17px 19px;border:1px solid rgba(130,205,220,.19);border-radius:14px;background:rgba(4,19,32,.42);backdrop-filter:blur(8px)}
+.ew-hero-aside-label{font-size:.61rem;letter-spacing:.16em;color:#83dce8;font-weight:700}
+.ew-hero-aside-value{font:600 1.05rem 'Space Grotesk';color:#f2fbff;margin-top:8px}
+.ew-hero-aside-note{font-size:.7rem;color:#9bb7c8;margin-top:5px;line-height:1.5}
+.ew-section{display:flex;align-items:center;gap:10px;margin:1.2rem 0 .55rem}
+.ew-section:before{content:'';display:block;width:3px;height:17px;border-radius:5px;background:linear-gradient(180deg,#67e0e9,#3b91bd)}
+.ew-card{box-shadow:0 10px 28px rgba(0,0,0,.10);transition:transform .18s ease,border-color .18s ease}
+.ew-card:hover{transform:translateY(-2px);border-color:rgba(88,213,231,.28)}
+div[data-testid="stMetric"]{min-height:112px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+div[data-testid="stMetricLabel"] p{font-size:.72rem;letter-spacing:.035em}
+div[data-testid="stMetricValue"]{font-size:1.65rem}
+[data-testid="stTabs"] button{font-weight:600}
+[data-testid="stTabs"] button[aria-selected="true"]{color:#70e0eb!important;border-bottom-color:#58d5e7!important}
+[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+[data-testid="stChatMessage"]{padding:14px 16px}
+[data-testid="stChatInput"] textarea{background:rgba(7,20,34,.85)}
+[data-testid="stSelectbox"] label,[data-testid="stDateInput"] label,[data-testid="stRadio"] label{color:#c5d7e4}
+.stCaption{color:#8faabd}
+.ew-footer{border-top:1px solid rgba(153,194,219,.10);line-height:1.9}
+@media(max-width:850px){.ew-hero{grid-template-columns:1fr}.ew-hero-aside{max-width:280px}.ew-status{font-size:.58rem}}
+@media(max-width:560px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{padding:23px 19px}.ew-hero-aside{width:100%;max-width:none}.ew-title{font-size:2.05rem}}
+</style></head><body>
     <div id="globe"><div id="load">LOADING EARTH VISUALIZATION…</div></div>
     <div class="hint">DRAG TO ROTATE · SCROLL TO ZOOM · SELECTED CITY HIGHLIGHTED</div>
     <script>
@@ -327,14 +365,21 @@ st.markdown(f"""
   <div class="ew-status">PAKISTAN-FIRST PLATFORM &nbsp; · &nbsp; DATA ON DEMAND</div>
 </div>
 <section class="ew-hero">
-  <div class="ew-eyebrow">EARTH OBSERVATION · CLIMATE INTELLIGENCE · AI</div>
-  <div class="ew-title">Understand the planet.<br>Start with Pakistan.</div>
-  <div class="ew-sub">A focused workspace for exploring climate evidence, understanding environmental signals, and asking better questions about our changing planet.</div>
-  <div class="ew-chips">
-    <span class="ew-chip">NASA POWER HISTORICAL DATA</span>
-    <span class="ew-chip">LIVE MODEL CONDITIONS</span>
-    <span class="ew-chip">CONVERSATIONAL AI</span>
+  <div>
+    <div class="ew-eyebrow">EARTH OBSERVATION · CLIMATE INTELLIGENCE · AI</div>
+    <div class="ew-title">Earth intelligence for {city}.</div>
+    <div class="ew-sub">Explore environmental signals for {REGIONS[city]["province"]}, investigate historical climate evidence, and ask better questions about our changing planet.</div>
+    <div class="ew-chips">
+      <span class="ew-chip">NASA POWER HISTORICAL DATA</span>
+      <span class="ew-chip">MODEL-BASED CONDITIONS</span>
+      <span class="ew-chip">CONVERSATIONAL AI</span>
+    </div>
   </div>
+  <aside class="ew-hero-aside">
+    <div class="ew-hero-aside-label">ACTIVE LOCATION</div>
+    <div class="ew-hero-aside-value">{city}</div>
+    <div class="ew-hero-aside-note">{REGIONS[city]["province"]} · Pakistan<br>{REGIONS[city]["latitude"]:.2f}° N, {REGIONS[city]["longitude"]:.2f}° E</div>
+  </aside>
 </section>
 """, unsafe_allow_html=True)
 
