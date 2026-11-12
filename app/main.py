@@ -309,8 +309,9 @@ try:
         REGIONS[city]["latitude"], REGIONS[city]["longitude"], city
     )
     wx1, wx2, wx3, wx4 = st.columns(4)
-    wx1.metric("Air temperature", f"{weather['temperature_2m']:.1f} °C",
-               f"Feels like {weather.get('apparent_temperature', float('nan')):.1f} °C")
+    feels_like = weather.get("apparent_temperature")
+    feels_label = f"Feels like {feels_like:.1f} °C" if isinstance(feels_like, (int, float)) else None
+    wx1.metric("Air temperature", f"{weather['temperature_2m']:.1f} °C", feels_label)
     wx2.metric("Humidity", f"{weather['relative_humidity_2m']:.0f}%")
     wx3.metric("Wind speed", f"{weather['wind_speed_10m']:.1f} km/h")
     wx4.metric("Precipitation", f"{weather['precipitation']:.1f} mm")
