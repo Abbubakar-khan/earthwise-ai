@@ -17,7 +17,7 @@ from src.nasa_power import fetch_daily, save_city_data
 from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
-from src.live_weather import get_current_conditions
+from src.live_weather import get_current_conditions, commercial_api_configured
 
 
 def render_earth_globe(selected_city):
@@ -323,7 +323,7 @@ try:
 except Exception as exc:
     st.warning(f"Current conditions are temporarily unavailable: {exc}")
 
-if not os.getenv("OPEN_METEO_API_KEY"):
+if not commercial_api_configured():
     st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 
 if df is None:
