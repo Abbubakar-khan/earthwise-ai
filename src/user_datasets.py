@@ -137,7 +137,7 @@ def parse_uploaded_file(filename: str, content: bytes) -> pd.DataFrame:
                 elif isinstance(payload.get("data"), list):
                     payload = payload["data"]
                 elif payload and all(isinstance(value, list) for value in payload.values()):
-                    payload = pd.DataFrame(payload)
+                    payload = pd.DataFrame(payload).to_dict(orient="records")
                 else:
                     payload = [payload]
             if not isinstance(payload, list) or not payload:
