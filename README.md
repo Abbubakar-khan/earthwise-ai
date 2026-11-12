@@ -23,7 +23,7 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 
 ## Run locally
 
-Python 3.9–3.11 is recommended for this MVP.
+Python 3.12–3.14 is supported by the current deployment dependency set. Streamlit Community Cloud currently defaults to Python 3.12; if creating a fresh deployment, select Python 3.12 in Advanced settings for the most conservative option.
 
 ```bash
 python -m venv .venv
