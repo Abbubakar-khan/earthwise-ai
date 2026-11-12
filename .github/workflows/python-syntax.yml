@@ -2,9 +2,9 @@ name: Python syntax checks
 
 on:
   push:
-    branches: [compat/streamlit-launch]
+    branches: [compat/streamlit-launch, feat/earthwise-ai-professional-v2]
   pull_request:
-    branches: [main]
+    branches: [main, compat/streamlit-launch]
 
 jobs:
   compile:

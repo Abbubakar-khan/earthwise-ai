@@ -6,3 +6,4 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+\n# Local Streamlit secrets must never be committed\n.streamlit/secrets.toml\n
