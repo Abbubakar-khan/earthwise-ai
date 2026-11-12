@@ -10,7 +10,7 @@ EARTHWISE AI is a Pakistan-first platform for exploring historical climate evide
 - **Climate Intelligence:** NASA POWER historical data, monthly aggregation, coverage metrics, time-series visualization, Kendall tau, Sen's slope, confidence interval display, methodology and CSV exports.
 - **AI Earth Scientist:** a conversational assistant that can explain climate concepts and interpret the selected location and loaded dataset. It uses the OpenAI Responses API with a server-side API key supplied by the app owner.
 - **Earth Explorer:** interactive textured 3D Earth, date-selectable NASA GIBS VIIRS imagery, and a Pakistan city atlas. Only the selected visualization is mounted to reduce unnecessary browser work.
-- **Data Library:** inspect and export daily and monthly records with source metadata.
+- **Data Library:** inspect and export NASA POWER records; upload, validate, privately store, reopen, download and delete user datasets in CSV, Excel (`.xlsx`, `.xls`, `.xlsm`) and JSON formats. Uploads are stored as PostgreSQL JSONB records, not on the ephemeral app filesystem.
 
 ## Data coverage and limitations
 
@@ -32,6 +32,7 @@ In Streamlit Community Cloud, open **App settings → Secrets** and add the foll
 ```toml
 OPENAI_API_KEY = "your-openai-api-key"
 OPENAI_MODEL = "gpt-4.1-mini"
+EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 
 # Optional: only when using an eligible Open-Meteo commercial subscription
 OPEN_METEO_API_KEY = "your-open-meteo-commercial-key"
@@ -40,6 +41,31 @@ OPEN_METEO_API_KEY = "your-open-meteo-commercial-key"
 The OpenAI key activates the conversational AI. Without it, the rest of the application remains usable and the AI workspace displays setup instructions. Never paste keys into source code, commit them to GitHub, or share them in chat. API usage is billed by the provider under the account that owns the key.
 
 Create an OpenAI API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) and review [API billing](https://platform.openai.com/settings/organization/billing).
+
+## Persistent user dataset storage
+
+User uploads require a hosted PostgreSQL database. Streamlit Community Cloud's local filesystem is not a durable database, so EARTHWISE AI does not claim persistence when this setting is absent.
+
+1. Create a PostgreSQL database with a managed provider such as [Neon](https://neon.tech/) or [Supabase](https://supabase.com/).
+2. Copy the database connection string. Prefer TLS/SSL, typically with `sslmode=require`.
+3. In Streamlit Community Cloud, open **App settings → Secrets** and add:
+
+```toml
+EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+```
+
+The app creates its `earthwise_user_datasets` table and index automatically on first use. Do not commit this connection string or paste it into the app interface.
+
+### Upload and privacy safeguards
+
+- Supported formats: CSV, XLSX, XLS, XLSM and JSON. Excel imports the first worksheet.
+- Maximum upload size: 15 MB; maximum 100,000 rows and 100 columns.
+- Files are parsed and validated in memory. Empty rows are dropped; missing cells are retained and counted in the preview.
+- Column names must be non-empty and unique (case-insensitive). JSON must contain row objects or a `data`/`records` array.
+- Each workspace uses a high-entropy recovery key. Only its SHA-256 hash is stored with the dataset records; the raw key is shown to the workspace owner and must be kept private.
+- Anyone holding a workspace recovery key can read and delete that workspace's uploads. This is bearer-key access, not a full user-account or team-permission system. Do not use it for regulated or highly sensitive personal data.
+- Uploads are stored in PostgreSQL JSONB and remain available across app restarts while the database and its backups remain available. Database retention, backups, and provider costs are controlled by the database owner.
+- The app does not silently upload files to GitHub or commit them into the repository.
 
 ## Run locally
 
