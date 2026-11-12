@@ -8,7 +8,7 @@ EARTHWISE AI is a Pakistan-first platform for exploring historical climate evide
 
 - **Mission Control:** location overview, model-based current conditions, selected dataset summary, and a clear entry point into the platform.
 - **Climate Intelligence:** NASA POWER historical data, monthly aggregation, coverage metrics, time-series visualization, Kendall tau, Sen's slope, confidence interval display, methodology and CSV exports.
-- **AI Earth Scientist:** a conversational assistant that can explain climate concepts and interpret the selected location and loaded dataset. It uses the OpenAI Responses API with a server-side API key supplied by the app owner.
+- **AI Earth Scientist:** a conversational assistant that can explain climate concepts and interpret the selected location and loaded dataset. It prefers the branch-scoped Neon AI Gateway and supports a server-side direct OpenAI Responses API fallback; provider credentials are supplied privately by the app owner.
 - **Earth Explorer:** interactive textured 3D Earth, date-selectable NASA GIBS VIIRS imagery, and a Pakistan city atlas. Only the selected visualization is mounted to reduce unnecessary browser work.
 - **Data Library:** inspect and export NASA POWER records; upload, validate, privately store, reopen, download and delete user datasets in CSV, Excel (`.xlsx`, `.xls`, `.xlsm`) and JSON formats. Uploads are stored as PostgreSQL JSONB records, not on the ephemeral app filesystem.
 
