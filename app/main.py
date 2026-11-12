@@ -19,7 +19,7 @@ from src.ai_engine import explain_result
 from src.live_weather import get_current_conditions
 
 
-def render_earth_globe():
+def render_earth_globe(selected_city):
     """Render an interactive textured 3D Earth with mapped Pakistan city markers."""
     points = [
         {"name": name, "lat": info["latitude"], "lng": info["longitude"],
@@ -27,6 +27,7 @@ def render_earth_globe():
         for name, info in REGIONS.items()
     ]
     city_data = json.dumps(points)
+    selected_data = json.dumps(selected_city)
     html = """<!doctype html><html><head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
@@ -40,6 +41,7 @@ def render_earth_globe():
       <script src="https://unpkg.com/globe.gl"></script>
       <script>
       const cityPoints = __CITY_DATA__;
+      const selectedCity = __SELECTED_CITY__;
       const el = document.getElementById('globe');
       try {
         const globe = Globe()(el)
@@ -52,7 +54,7 @@ def render_earth_globe():
           .pointsData(cityPoints)
           .pointLat(d => d.lat)
           .pointLng(d => d.lng)
-          .pointColor(d => d.name === 'Pakistan' ? '#f7d46a' : '#6ce7f4')
+          .pointColor(d => d.name === selectedCity ? '#ffd36a' : '#6ce7f4')
           .pointAltitude(0.018)
           .pointRadius(0.12)
           .pointResolution(12)
@@ -70,7 +72,8 @@ def render_earth_globe():
         document.getElementById('load').textContent = '3D GLOBE COULD NOT LOAD — CHECK NETWORK ACCESS';
       }
       </script></body></html>"""
-    components.html(html.replace("__CITY_DATA__", city_data), height=550, scrolling=False)
+    html = html.replace("__CITY_DATA__", city_data).replace("__SELECTED_CITY__", selected_data)
+    components.html(html, height=550, scrolling=False)
 
 
 def render_nasa_satellite_map(imagery_date):
@@ -264,7 +267,7 @@ st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_
 globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  3D Earth", "🛰️  NASA Satellite", "📍  Pakistan Cities"])
 with globe_tab:
     st.caption("Interactive textured Earth · City markers · Drag to rotate and scroll to zoom")
-    render_earth_globe()
+    render_earth_globe(city)
     st.caption("Earth texture is a visual basemap. City markers use approximate city-centre coordinates; this is not a live satellite video feed.")
 with satellite_tab:
     imagery_date = st.date_input(
@@ -313,10 +316,13 @@ try:
     st.caption(
         f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover', '—')}% · "
         f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
-        "Source: Open-Meteo forecast models"
+        f"Source: {weather['source']} · Open-Meteo"
     )
 except Exception as exc:
     st.warning(f"Current conditions are temporarily unavailable: {exc}")
+
+if not __import__("os").getenv("OPEN_METEO_API_KEY"):
+    st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 
 if df is None:
     st.markdown('<div class="ew-section">Your climate workspace</div>', unsafe_allow_html=True)
