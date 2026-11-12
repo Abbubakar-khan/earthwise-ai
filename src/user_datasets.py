@@ -80,29 +80,6 @@ def _connect():
         ) from exc
 
 
-def _ensure_table(connection) -> None:
-    connection.execute(
-        """
-        CREATE TABLE IF NOT EXISTS earthwise_user_datasets (
-            id UUID PRIMARY KEY,
-            workspace_hash CHAR(64) NOT NULL,
-            filename TEXT NOT NULL,
-            file_format TEXT NOT NULL,
-            row_count INTEGER NOT NULL,
-            column_names JSONB NOT NULL,
-            records JSONB NOT NULL,
-            uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """
-    )
-    connection.execute(
-        """
-        CREATE INDEX IF NOT EXISTS earthwise_user_datasets_workspace_idx
-        ON earthwise_user_datasets (workspace_hash, uploaded_at DESC)
-        """
-    )
-
-
 def parse_uploaded_file(filename: str, content: bytes) -> pd.DataFrame:
     """Parse CSV, Excel, or JSON bytes into a validated tabular DataFrame."""
     suffix = Path(filename or "").suffix.lower()
@@ -187,10 +164,9 @@ def save_dataset(token: str, filename: str, frame: pd.DataFrame) -> str:
     dataset_id = str(uuid.uuid4())
     try:
         with _connect() as connection:
-            _ensure_table(connection)
             row = connection.execute(
                 """
-                INSERT INTO earthwise_user_datasets
+                INSERT INTO public.earthwise_user_datasets
                     (id, workspace_hash, filename, file_format, row_count, column_names, records)
                 VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
                 RETURNING id::text
@@ -218,11 +194,10 @@ def list_datasets(token: str) -> list[dict[str, Any]]:
     workspace_hash = _workspace_hash(token)
     try:
         with _connect() as connection:
-            _ensure_table(connection)
             rows = connection.execute(
                 """
                 SELECT id::text, filename, file_format, row_count, uploaded_at::text
-                FROM earthwise_user_datasets
+                FROM public.earthwise_user_datasets
                 WHERE workspace_hash = %s
                 ORDER BY uploaded_at DESC
                 """,
@@ -245,11 +220,10 @@ def load_dataset(token: str, dataset_id: str) -> pd.DataFrame:
     workspace_hash = _workspace_hash(token)
     try:
         with _connect() as connection:
-            _ensure_table(connection)
             row = connection.execute(
                 """
                 SELECT column_names, records
-                FROM earthwise_user_datasets
+                FROM public.earthwise_user_datasets
                 WHERE workspace_hash = %s AND id = %s::uuid
                 """,
                 (workspace_hash, dataset_id),
@@ -273,10 +247,9 @@ def delete_dataset(token: str, dataset_id: str) -> bool:
     workspace_hash = _workspace_hash(token)
     try:
         with _connect() as connection:
-            _ensure_table(connection)
             cursor = connection.execute(
                 """
-                DELETE FROM earthwise_user_datasets
+                DELETE FROM public.earthwise_user_datasets
                 WHERE workspace_hash = %s AND id = %s::uuid
                 """,
                 (workspace_hash, dataset_id),
