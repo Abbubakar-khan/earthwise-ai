@@ -5,6 +5,7 @@ high-entropy workspace recovery key (only its SHA-256 hash is stored).
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import json
@@ -116,6 +117,15 @@ def parse_uploaded_file(filename: str, content: bytes) -> pd.DataFrame:
 
     try:
         if suffix == ".csv":
+            try:
+                header = next(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
+            except (UnicodeDecodeError, StopIteration) as exc:
+                raise UploadValidationError("The CSV file needs a readable header row.") from exc
+            clean_header = [str(name).strip() for name in header]
+            if any(not name for name in clean_header):
+                raise UploadValidationError("Every CSV column must have a non-empty name.")
+            if len({name.casefold() for name in clean_header}) != len(clean_header):
+                raise UploadValidationError("Column names must be unique, ignoring letter case.")
             frame = pd.read_csv(io.BytesIO(content), encoding="utf-8-sig", low_memory=False)
         elif suffix in {".xlsx", ".xls", ".xlsm"}:
             frame = pd.read_excel(io.BytesIO(content), sheet_name=0)
@@ -126,6 +136,8 @@ def parse_uploaded_file(filename: str, content: bytes) -> pd.DataFrame:
                     payload = payload["records"]
                 elif isinstance(payload.get("data"), list):
                     payload = payload["data"]
+                elif payload and all(isinstance(value, list) for value in payload.values()):
+                    payload = pd.DataFrame(payload)
                 else:
                     payload = [payload]
             if not isinstance(payload, list) or not payload:
