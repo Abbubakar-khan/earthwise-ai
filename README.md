@@ -30,17 +30,25 @@ EARTHWISE AI is a Pakistan-first platform for exploring historical climate evide
 In Streamlit Community Cloud, open **App settings → Secrets** and add the following TOML entries:
 
 ```toml
+# Preferred: Neon AI Gateway (branch-scoped credential)
+NEON_AI_GATEWAY_BASE_URL = "https://YOUR-BRANCH-api.ai.YOUR-REGION.aws.neon.tech"
+NEON_AI_GATEWAY_TOKEN = "your-neon-scoped-credential"
+NEON_AI_MODEL = "gpt-5-mini"
+
+# Required for persistent uploads; use your Neon PostgreSQL connection string
+EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+
+# Optional fallback if Neon AI Gateway is not configured
 OPENAI_API_KEY = "your-openai-api-key"
 OPENAI_MODEL = "gpt-4.1-mini"
-EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 
 # Optional: only when using an eligible Open-Meteo commercial subscription
 OPEN_METEO_API_KEY = "your-open-meteo-commercial-key"
 ```
 
-The OpenAI key activates the conversational AI. Without it, the rest of the application remains usable and the AI workspace displays setup instructions. Never paste keys into source code, commit them to GitHub, or share them in chat. API usage is billed by the provider under the account that owns the key.
+When both Neon Gateway settings are present, conversational AI uses the branch-scoped Neon AI Gateway; otherwise it falls back to the direct OpenAI Responses API when `OPENAI_API_KEY` is present. The rest of the application remains usable if neither AI provider is configured. The Gateway base URL is the bare host; the app adds `/openai/v1/responses`. Use a model ID enabled for your branch (check the branch's `/v1/models` catalog). Never paste keys into source code, commit them to GitHub, or share them in chat. Gateway usage draws down the Neon organization's prepaid AI credits; direct OpenAI usage is billed by OpenAI.
 
-Create an OpenAI API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) and review [API billing](https://platform.openai.com/settings/organization/billing).
+Create a Neon scoped credential with the `ai_gateway:invoke` capability for the app's branch. Keep its token private. For direct OpenAI fallback, create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) and review [API billing](https://platform.openai.com/settings/organization/billing).
 
 ## Persistent user dataset storage
 
