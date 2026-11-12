@@ -1,7 +1,7 @@
 """EARTHWISE AI conversational climate assistant.
 
-Uses the OpenAI Responses API only when the owner supplies an API key in
-Streamlit secrets. The key is never shown in the interface or sent to the browser.
+Uses Neon's branch-scoped AI Gateway when configured, with an optional direct
+OpenAI Responses API fallback. Credentials are read server-side only.
 """
 from __future__ import annotations
 
@@ -11,8 +11,9 @@ from typing import Any
 import requests
 import streamlit as st
 
-API_URL = "https://api.openai.com/v1/responses"
-DEFAULT_MODEL = "gpt-4.1-mini"
+OPENAI_API_URL = "https://api.openai.com/v1/responses"
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+DEFAULT_NEON_MODEL = "gpt-5-mini"
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -25,16 +26,35 @@ def _secret(name: str, default: str = "") -> str:
         return default
 
 
+def _gateway_config() -> tuple[str, str]:
+    """Return the Neon Gateway base URL and token when both are configured."""
+    base_url = _secret("NEON_AI_GATEWAY_BASE_URL").strip().rstrip("/")
+    token = _secret("NEON_AI_GATEWAY_TOKEN").strip()
+    return (base_url, token) if base_url and token else ("", "")
+
+
 def assistant_configured() -> bool:
-    return bool(_secret("OPENAI_API_KEY").strip())
+    gateway_url, gateway_token = _gateway_config()
+    return bool((gateway_url and gateway_token) or _secret("OPENAI_API_KEY").strip())
 
 
 def ask_earthwise(question: str, context: dict[str, Any], history: list[dict[str, str]]) -> str:
-    """Ask the configured language model, with strict evidence and safety boundaries."""
-    api_key = _secret("OPENAI_API_KEY").strip()
-    if not api_key:
-        raise RuntimeError("EARTHWISE AI chat is not configured yet. Add OPENAI_API_KEY in Streamlit app Secrets.")
-    model = _secret("OPENAI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    """Ask the configured model with evidence and safety boundaries."""
+    gateway_url, gateway_token = _gateway_config()
+    if gateway_url and gateway_token:
+        api_url = f"{gateway_url}/openai/v1/responses"
+        api_key = gateway_token
+        model = _secret("NEON_AI_MODEL", DEFAULT_NEON_MODEL).strip() or DEFAULT_NEON_MODEL
+    else:
+        api_key = _secret("OPENAI_API_KEY").strip()
+        if not api_key:
+            raise RuntimeError(
+                "EARTHWISE AI chat is not configured. Add NEON_AI_GATEWAY_BASE_URL "
+                "and NEON_AI_GATEWAY_TOKEN, or an OPENAI_API_KEY, in Streamlit app Secrets."
+            )
+        api_url = OPENAI_API_URL
+        model = _secret("OPENAI_MODEL", DEFAULT_OPENAI_MODEL).strip() or DEFAULT_OPENAI_MODEL
+
     instructions = (
         "You are EARTHWISE AI, a careful Earth and climate intelligence assistant. "
         "Help users understand Pakistan's climate, weather, geography, satellite imagery, "
@@ -64,14 +84,17 @@ def ask_earthwise(question: str, context: dict[str, Any], history: list[dict[str
     }
     try:
         response = requests.post(
-            API_URL,
+            api_url,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=payload,
             timeout=60,
         )
         if response.status_code >= 400:
             # Never echo provider response bodies because they may contain sensitive details.
-            raise RuntimeError(f"The AI provider returned HTTP {response.status_code}. Check the API key, billing, model access, and usage limits.")
+            raise RuntimeError(
+                f"The AI provider returned HTTP {response.status_code}. "
+                "Check the Neon Gateway credential/model access or the configured provider key."
+            )
         data = response.json()
     except requests.Timeout as exc:
         raise RuntimeError("The AI request timed out. Please try again.") from exc
