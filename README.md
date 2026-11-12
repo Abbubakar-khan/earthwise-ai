@@ -6,7 +6,8 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 
 ## Current MVP features
 
-- Expanded directory of 100+ major urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction; this is not yet the complete 657-locality PBS 2023 gazetteer.
+- Searchable directory of 101 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
+- PBS 2023 Census reference: [National Census Report](https://www.pbs.gov.pk/sites/default/files/population/2023/reports/National%20Census%20Report-2023.pdf) and [Table 2 — Urban Localities](https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_2_national.pdf).
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
 - Province/region filtering, searchable-by-region city selection, and an interactive Pakistan city map.
 - Refined English-language mission-control interface with responsive layout, subtle motion, hover states, animated status indicator, and reduced-motion accessibility.
