@@ -2,9 +2,9 @@ name: EARTHWISE AI CI Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, integration/neon-backend]
   pull_request:
-    branches: [main, compat/streamlit-launch]
+    branches: [main, compat/streamlit-launch, feat/earthwise-ai-professional-v2]
   workflow_dispatch:
 
 jobs:
