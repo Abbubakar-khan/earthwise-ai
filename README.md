@@ -62,7 +62,9 @@ User uploads require a hosted PostgreSQL database. Streamlit Community Cloud's l
 EARTHWISE_DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 ```
 
-The app creates its `earthwise_user_datasets` table and index automatically on first use. Do not commit this connection string or paste it into the app interface.
+Apply the SQL migration in `migrations/0001_user_datasets.sql` once to the same Neon branch/database used by the app, using an admin/migration role. The runtime app role only needs the required table privileges for SELECT, INSERT and DELETE. The application no longer attempts to create or alter database schema at runtime. Do not commit this connection string or paste it into the app interface.
+
+For the current integration work, the isolated Neon branch `dev-neon-integration` already has this table and index. Production was not modified.
 
 ### Upload and privacy safeguards
 
@@ -74,6 +76,24 @@ The app creates its `earthwise_user_datasets` table and index automatically on f
 - Anyone holding a workspace recovery key can read and delete that workspace's uploads. This is bearer-key access, not a full user-account or team-permission system. Do not use it for regulated or highly sensitive personal data.
 - Uploads are stored as normalized tabular records in PostgreSQL JSONB (not as the original workbook binary, styling, or formulas) and remain available across app restarts while the database and its backups remain available. Database retention, backups, and provider costs are controlled by the database owner.
 - The app does not silently upload files to GitHub or commit them into the repository.
+
+## Competition demo plan
+
+Use the following short, evidence-led flow for a live judging demo:
+
+1. **Mission Control:** select a Pakistan city (for example Lahore) and explain that current conditions are model-based Open-Meteo output, not a local weather-station observation.
+2. **Climate Intelligence:** retrieve NASA POWER daily records for the selected city and period; show coverage, monthly trend, and the statistical method. Explain that gridded satellite/reanalysis data is not a substitute for station measurements.
+3. **Earth Explorer:** show the interactive globe and date-selectable NASA GIBS imagery.
+4. **AI Earth Scientist:** ask it to explain the selected climate variable and distinguish observed data from uncertainty. This requires a working Neon AI Gateway or OpenAI credential in private app Secrets.
+5. **Data Library (optional):** demonstrate CSV upload, validation, persistent save, reopen and export only after a real end-to-end test against the configured database.
+
+### Submission claims and limitations
+
+- Do not claim a live AI response unless the deployed app has successfully completed a real request.
+- Do not claim persistent uploads unless the deployed app has successfully saved and reopened a test file.
+- The Pakistan city catalogue contains 101 mapped urban centres, not the full PBS 657-locality directory.
+- The platform is a research and decision-support prototype, not an official emergency alert system or a replacement for local authorities.
+- Planned features listed below are not implemented and must not be presented as completed capabilities.
 
 ## Run locally
 
