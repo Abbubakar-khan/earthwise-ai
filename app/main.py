@@ -762,7 +762,7 @@ elif page == "Data Library":
                     st.download_button(
                         "Download saved dataset (CSV)",
                         saved_frame.to_csv(index=False),
-                        f'{dataset_options[selected_saved_id]["filename"]}.csv',
+                        f'{Path(dataset_options[selected_saved_id]["filename"]).stem}_export.csv',
                         "text/csv",
                     )
             else:
