@@ -6,8 +6,10 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 
 ## Current MVP features
 
-- Nine Pakistan locations: Islamabad, Lahore, Karachi, Peshawar, Quetta, Faisalabad, Multan, Skardu and Gilgit.
+- Expanded directory of 100+ major urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction; this is not yet the complete 657-locality PBS 2023 gazetteer.
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
+- Province/region filtering, searchable-by-region city selection, and an interactive Pakistan city map.
+- Refined English-language mission-control interface with responsive layout, subtle motion, hover states, animated status indicator, and reduced-motion accessibility.
 - Historical date-range selection and NASA POWER API retrieval.
 - Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
 - Downloadable monthly CSV and local raw-data/metadata files.
@@ -67,4 +69,4 @@ The app fetches NASA POWER data when a user presses the fetch button, so the dep
 
 ## Roadmap (not yet implemented)
 
-Interactive 3D globe, satellite imagery layers, earthquake/fire/flood monitoring, forecast feeds, historical city comparisons, and future climate scenarios are planned modules. They must be integrated with clear source attribution and uncertainty labels before being presented as operational features.
+Interactive 3D globe, satellite imagery layers, earthquake/fire/flood monitoring, forecast feeds, historical city comparisons, and future climate scenarios are planned modules. The current interface's animated system status is a visual UI indicator, not a claim of live environmental telemetry. They must be integrated with clear source attribution and uncertainty labels before being presented as operational features.
