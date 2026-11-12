@@ -194,7 +194,7 @@ footer{visibility:hidden}
 st.markdown("""
 <div class="ew-top">
   <div class="ew-brand">EARTHWISE <span>AI</span> &nbsp; / &nbsp; EARTH INTELLIGENCE</div>
-  <div class="ew-live"><i></i> SYSTEM ONLINE &nbsp;·&nbsp; DATA ON DEMAND</div>
+  <div class="ew-live"><i></i> PLATFORM READY &nbsp;·&nbsp; DATA ON DEMAND</div>
 </div>
 <section class="ew-hero">
   <div class="ew-eyebrow">PAKISTAN CLIMATE INTELLIGENCE PLATFORM</div>
@@ -349,6 +349,7 @@ meta = coverage_summary(df, variable)
 monthly = monthly_aggregate(df, variable)
 result = analyze_trend(monthly, variable)
 spec = VARIABLES[variable]
+analysis_unit = "mm/month" if variable == "PRECTOTCORR" else spec["unit"]
 
 st.markdown(f'<div class="ew-section">{city} <span style="color:#6ce7f4">/</span> {spec["label"]}</div>', unsafe_allow_html=True)
 st.caption(f"{REGIONS[city]['province']} · Monthly analysis · {spec['unit']} · {meta['first_date']} to {meta['last_date']}")
@@ -361,11 +362,11 @@ m4.metric("Analysis window", f"{start_year if 'start_year' in locals() else mont
 tab_overview, tab_trends, tab_data = st.tabs(["◈  Overview", "⌁  Trend analysis", "▤  Data explorer"])
 with tab_overview:
     st.markdown('<div class="ew-section">Climate signal over time</div>', unsafe_allow_html=True)
-    fig = px.area(monthly, x="date", y=variable, labels={"date":"Month",variable:f"{spec['label']} ({spec['unit']})"})
+    fig = px.area(monthly, x="date", y=variable, labels={"date":"Month",variable:f"{spec['label']} ({analysis_unit})"})
     fig.update_traces(line=dict(color="#6ce7f4",width=2.5),fillcolor="rgba(74,196,224,.12)",hovertemplate="%{x|%b %Y}<br>%{y:.2f}<extra></extra>")
     fig.update_layout(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(7,20,34,.35)",font=dict(family="DM Sans",color="#b7cbd9"),
         margin=dict(l=5,r=10,t=18,b=5),height=390,hovermode="x unified",
-        xaxis=dict(showgrid=False,zeroline=False,title=None),yaxis=dict(gridcolor="rgba(145,180,205,.12)",zeroline=False,title=spec["unit"]))
+        xaxis=dict(showgrid=False,zeroline=False,title=None),yaxis=dict(gridcolor="rgba(145,180,205,.12)",zeroline=False,title=analysis_unit))
     st.plotly_chart(fig,use_container_width=True,config={"displaylogo":False,"responsive":True})
     st.caption("Monthly precipitation is summed; other indicators are monthly means.")
 with tab_trends:
@@ -373,7 +374,7 @@ with tab_trends:
     if result.get("status") == "ok":
         x1,x2,x3,x4=st.columns(4)
         x1.metric("Long-term direction",result["direction"].title())
-        x2.metric("Sen slope / decade",f"{result['sen_slope_per_decade']:.4g} {spec['unit']}")
+        x2.metric("Sen slope / decade",f"{result['sen_slope_per_decade']:.4g} {analysis_unit}")
         p_value=result.get("p_value")
         x3.metric("Kendall p-value",f"{p_value:.4g}" if p_value is not None else "Unavailable")
         x4.metric("Significant at 0.05","Yes" if result["significant_005"] else "No")
@@ -384,7 +385,7 @@ with tab_trends:
           <div class="ew-ai-description">An evidence-linked interpretation generated from the selected city's calculated climate statistics — not a free-form forecast.</div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown(explain_result(city,spec["label"],spec["unit"],result))
+        st.markdown(explain_result(city,spec["label"],analysis_unit,result))
         st.caption("ENGINE OUTPUT · Based on the displayed dataset, Sen's slope and Kendall tau. Review methodology and limitations below.")
     else:
         st.warning(result.get("message","There is not enough data to calculate a reliable trend."))
