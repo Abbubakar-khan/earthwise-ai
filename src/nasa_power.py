@@ -29,7 +29,13 @@ def fetch_daily(city: str, latitude: float, longitude: float,
     except (KeyError, TypeError) as exc:
         raise ValueError(f"Unexpected NASA POWER response: {str(payload)[:500]}") from exc
 
+    if not isinstance(parameter_data, dict) or not parameter_data:
+        raise ValueError("NASA POWER returned no parameter records for the requested period.")
+
     df = pd.DataFrame(parameter_data)
+    missing_parameters = [name for name in parameters if name not in df.columns]
+    if missing_parameters:
+        raise ValueError("NASA POWER response is missing requested parameter(s): " + ", ".join(missing_parameters))
     df.index.name = "date"
     df = df.reset_index()
     df["date"] = pd.to_datetime(df["date"], format="%Y%m%d", errors="coerce")
