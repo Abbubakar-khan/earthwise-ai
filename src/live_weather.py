@@ -4,10 +4,13 @@ These are model-derived current conditions, not guaranteed ground-station observ
 """
 from __future__ import annotations
 
+import os
+
 import requests
 import streamlit as st
 
-API_URL = "https://api.open-meteo.com/v1/forecast"
+FREE_API_URL = "https://api.open-meteo.com/v1/forecast"
+COMMERCIAL_API_URL = "https://customer-api.open-meteo.com/v1/forecast"
 
 WEATHER_CODES = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
@@ -39,7 +42,11 @@ def get_current_conditions(latitude: float, longitude: float, city: str) -> dict
         "wind_speed_unit": "kmh",
         "precipitation_unit": "mm",
     }
-    response = requests.get(API_URL, params=params, timeout=20)
+    api_key = os.getenv("OPEN_METEO_API_KEY")
+    api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
+    if api_key:
+        params["apikey"] = api_key
+    response = requests.get(api_url, params=params, timeout=20)
     response.raise_for_status()
     payload = response.json()
     current = payload.get("current")
@@ -50,5 +57,5 @@ def get_current_conditions(latitude: float, longitude: float, city: str) -> dict
     current["city"] = city
     current["timezone"] = payload.get("timezone", "Local time")
     current["provider_time"] = current.get("time", "Time unavailable")
-    current["source"] = "Open-Meteo forecast models"
+    current["source"] = "Open-Meteo commercial API" if api_key else "Open-Meteo free evaluation API"
     return current
