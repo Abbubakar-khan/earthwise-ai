@@ -60,7 +60,7 @@ py -m streamlit run app/main.py
 4. Set the main file path to `app/main.py`.
 5. Deploy. The first run installs the dependencies and may take several minutes.
 
-The app fetches NASA POWER data when a user presses the fetch button, so the deployed app needs outbound internet access. Do not commit passwords, tokens, or private API keys.
+The app fetches NASA POWER data when a user presses the fetch button, so the deployed app needs outbound internet access. Do not commit passwords, tokens, or private API keys. For commercial weather use, add `OPEN_METEO_API_KEY` to Streamlit Community Cloud app Secrets (TOML format) or the deployment environment; never put the key in Git. Without a commercial key, the weather panel uses the non-commercial evaluation endpoint only.
 
 ## Project structure
 
