@@ -64,7 +64,7 @@ The app creates its `earthwise_user_datasets` table and index automatically on f
 - Column names must be non-empty and unique (case-insensitive). JSON must contain row objects or a `data`/`records` array.
 - Each workspace uses a high-entropy recovery key. Only its SHA-256 hash is stored with the dataset records; the raw key is shown to the workspace owner and must be kept private.
 - Anyone holding a workspace recovery key can read and delete that workspace's uploads. This is bearer-key access, not a full user-account or team-permission system. Do not use it for regulated or highly sensitive personal data.
-- Uploads are stored in PostgreSQL JSONB and remain available across app restarts while the database and its backups remain available. Database retention, backups, and provider costs are controlled by the database owner.
+- Uploads are stored as normalized tabular records in PostgreSQL JSONB (not as the original workbook binary, styling, or formulas) and remain available across app restarts while the database and its backups remain available. Database retention, backups, and provider costs are controlled by the database owner.
 - The app does not silently upload files to GitHub or commit them into the repository.
 
 ## Run locally
