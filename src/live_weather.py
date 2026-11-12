@@ -12,6 +12,20 @@ import streamlit as st
 FREE_API_URL = "https://api.open-meteo.com/v1/forecast"
 COMMERCIAL_API_URL = "https://customer-api.open-meteo.com/v1/forecast"
 
+
+def _get_api_key() -> str | None:
+    key = os.getenv("OPEN_METEO_API_KEY")
+    if key:
+        return key
+    try:
+        return st.secrets.get("OPEN_METEO_API_KEY")
+    except Exception:
+        return None
+
+
+def commercial_api_configured() -> bool:
+    return bool(_get_api_key())
+
 WEATHER_CODES = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
     45: "Fog", 48: "Depositing rime fog",
@@ -42,7 +56,7 @@ def get_current_conditions(latitude: float, longitude: float, city: str) -> dict
         "wind_speed_unit": "kmh",
         "precipitation_unit": "mm",
     }
-    api_key = os.getenv("OPEN_METEO_API_KEY")
+    api_key = _get_api_key()
     api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
     if api_key:
         params["apikey"] = api_key
