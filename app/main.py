@@ -299,7 +299,7 @@ with cities_tab:
 
 st.markdown('<div class="ew-section">Current conditions</div>', unsafe_allow_html=True)
 st.caption(f"{city} · Model-based latest conditions · Cached for 15 minutes · Not a station observation")
-refresh_col, source_col = st.columns([1, 3])
+refresh_col, _ = st.columns([1, 3])
 with refresh_col:
     refresh_weather = st.button("↻  Refresh conditions", use_container_width=True)
 if refresh_weather:
@@ -316,7 +316,7 @@ try:
     wx3.metric("Wind speed", f"{weather['wind_speed_10m']:.1f} km/h")
     wx4.metric("Precipitation", f"{weather['precipitation']:.1f} mm")
     st.caption(
-        f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover', '—')}% · "
+        f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover') if weather.get('cloud_cover') is not None else '—'}% · "
         f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
         f"Source: {weather['source']} · [Open-Meteo](https://open-meteo.com/)"
     )
