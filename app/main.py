@@ -106,9 +106,11 @@ def render_globe(selected_city: str):
           .pointColor(d=>d.name===selected?'#ffd36a':'#6ce7f4')
           .pointAltitude(.018).pointRadius(.12).pointResolution(12)
           .pointLabel(d=>'<b>'+d.name+'</b><br>'+d.province)
-          .width(el.clientWidth).height(520);
-        globe.pointOfView({lat:29.5,lng:69.5,altitude:2.05},1200);
-        globe.controls().autoRotate=true;globe.controls().autoRotateSpeed=.22;
+          .width(el.clientWidth).height(el.clientWidth<560?390:520);
+        globe.pointOfView({lat:29.5,lng:69.5,altitude:2.05},900);
+        // Keep the globe still until the visitor interacts; continuous rotation
+        // wastes GPU/battery on mobile and can make the workspace feel busy.
+        globe.controls().autoRotate=false;
         globe.controls().enableDamping=true;
         clearTimeout(timer);document.getElementById('load').remove();
         window.addEventListener('resize',()=>globe.width(el.clientWidth));
