@@ -21,3 +21,17 @@ def test_upward_trend_detected():
     assert result["status"] == "ok"
     assert result["direction"] == "increasing"
     assert result["sen_slope_per_decade"] > 0
+
+
+
+def test_constant_series_has_unavailable_significance_not_crash():
+    from src.ai_engine import explain_result
+
+    dates = pd.date_range("2000-01-01", periods=60, freq="MS")
+    df = pd.DataFrame({"date": dates, "x": [5.0] * 60})
+    result = analyze_trend(df, "x")
+    assert result["status"] == "ok"
+    assert result["p_value"] is None
+    explanation = explain_result("Lahore", "Temperature", "°C", result)
+    assert "unavailable" in explanation
+    assert "not statistically testable" in explanation
