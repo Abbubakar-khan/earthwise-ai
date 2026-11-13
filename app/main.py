@@ -8,7 +8,7 @@ No fake / sample data anywhere. Every number is labelled with source + time.
 Only env var: OPEN_METEO_API_KEY (optional, commercial weather use).
 """
 from pathlib import Path
-import sys, json, html, time
+import sys, json, html
 from datetime import date, timedelta
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
@@ -171,11 +171,15 @@ if "chat" not in st.session_state: st.session_state.chat = []
 # Opening intro splash — once per session, ~3s, instead of a blank load.
 # Shown BEFORE any live fetch, so the first thing a visitor sees is the
 # brand, not a spinner. Reduced-motion users see a near-static splash.
+# The splash is rendered in this SAME first run, overlaying the app with
+# position:fixed, and its CSS fade-out (3.1s) runs from the moment the
+# browser paints it — no server-side sleep + rerun. (The old sleep/rerun
+# pattern raced the browser paint: on slow connections / cold Streamlit
+# starts the rerun could replace the page before the splash was ever
+# painted, so visitors saw it flash or not at all.)
 if not st.session_state.get("intro_seen"):
     st.session_state["intro_seen"] = True
     st.markdown(intro_html(), unsafe_allow_html=True)
-    time.sleep(3.0)
-    st.rerun()
 st.markdown('<div class="ew-top"><div class="ew-brand">EARTHWISE&nbsp;<span>AI</span>&nbsp;&nbsp;<span class="ew-brand-sub">/ PAKISTAN INTELLIGENCE</span></div><div class="ew-live"><i></i> LIVE DATA WORKSPACE</div></div>', unsafe_allow_html=True)
 
 def empty_state(title, body, steps):
@@ -198,6 +202,12 @@ def fetch_current_dataset():
     except Exception as exc:
         st.error(f"NASA POWER request failed: {exc}")
         return False
+
+# Top-nav tap (mobile): a nav button below stores the target page in
+# "_nav_target" and reruns. Apply it BEFORE the keyed radio is created,
+# so the radio adopts the new page and the two always agree.
+if "_nav_target" in st.session_state:
+    st.session_state["page"] = st.session_state.pop("_nav_target")
 
 # ---------- Sidebar: navigation + controls ----------
 PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
@@ -245,6 +255,22 @@ with st.sidebar:
         st.markdown("- **Official warnings** — Pakistan Meteorological Department: [weather.gov.pk](https://weather.gov.pk/)")
     if not commercial_api_configured():
         st.caption("Prototype mode: free Open-Meteo endpoint only. Set OPEN_METEO_API_KEY for commercial use.")
+
+# ---------- Top navigation — visible on mobile, where the sidebar is hidden ----------
+# Plain buttons (not a second stateful widget): a tap stores the target page
+# in "_nav_target" and reruns; the keyed sidebar radio adopts it on the
+# next run (see above), so the two always agree and the keyed-radio fix is
+# untouched. Active page is highlighted with the primary button style.
+# Two rows (4 + 3) so the buttons stay tap-friendly on a phone screen.
+for _nav_row in (PAGES[:4], PAGES[4:]):
+    _nav_cols = st.columns(len(_nav_row))
+    for _nav_col, _nav_page in zip(_nav_cols, _nav_row):
+        with _nav_col:
+            if st.button(_nav_page, key=f"nav_{_nav_page}",
+                         type="primary" if _nav_page == page else "secondary",
+                         use_container_width=True):
+                st.session_state["_nav_target"] = _nav_page
+                st.rerun()
 
 # ---------- Fetch climate data ----------
 if fetch:
