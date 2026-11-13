@@ -127,6 +127,14 @@ OPENAI_MODEL = "gpt-4.1-mini"
 
 The app requires outbound internet access for NASA POWER, Open-Meteo, NASA GIBS tiles, the globe CDN, and the configured AI provider.
 
+## Competition presentation assets
+
+- [3-minute demo video script and recording checklist](docs/DEMO_VIDEO_SCRIPT.md)
+- [12-slide competition pitch deck content and evidence checklist](docs/COMPETITION_SLIDE_CONTENT.md)
+- [Competition submission brief](docs/COMPETITION_SUBMISSION.md)
+
+These materials distinguish verified functionality from credential-dependent features and planned work. Replace screenshot placeholders with genuine captures from the tested application before submission.
+
 ## Project structure
 
 - `app/main.py`: Streamlit product interface and navigation
