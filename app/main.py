@@ -492,7 +492,7 @@ with tab_trends:
         x2.metric("Sen slope / decade",f"{result['sen_slope_per_decade']:.4g} {analysis_unit}")
         p_value=result.get("p_value")
         x3.metric("Kendall p-value",f"{p_value:.4g}" if p_value is not None else "Unavailable")
-        x4.metric("Significant at 0.05","Yes" if result["significant_005"] else "No")
+        x4.metric("Significant at 0.05", "Yes" if result["significant_005"] is True else ("No" if result["significant_005"] is False else "Unavailable"))
         st.markdown("""
         <div class="ew-ai-card">
           <div class="ew-ai-kicker">EARTHWISE INTELLIGENCE · ANALYSIS ENGINE</div>
