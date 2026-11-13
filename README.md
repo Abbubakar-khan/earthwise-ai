@@ -9,10 +9,10 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 - Searchable directory of 101 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
 - PBS 2023 Census reference: [National Census Report](https://www.pbs.gov.pk/sites/default/files/population/2023/reports/National%20Census%20Report-2023.pdf) and [Table 2 — Urban Localities](https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_2_national.pdf).
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
-- Province/region filtering, searchable city selection, an interactive Pakistan map, and a textured, rotatable 3D Earth globe with city markers.
+- Province/region filtering, searchable city selection, a Pakistan-wide model-weather map with temperature, rainfall, humidity and wind layers across the mapped city directory, and a textured, rotatable 3D Earth globe with city markers.
 - NASA GIBS VIIRS Suomi-NPP corrected-reflectance true-colour daily satellite imagery, date-selectable and overlaid with Pakistan city markers.
 - Model-based current weather conditions from Open-Meteo (temperature, apparent temperature, humidity, wind, precipitation and cloud cover), cached for 15 minutes.
-- Seven-day daily model forecast and next-24-hour temperature outlook from Open-Meteo, cached for 30 minutes and refreshed with the weather refresh control.
+- Seven-day daily model forecast and next-24-hour temperature outlook from Open-Meteo, cached for 30 minutes and refreshed with the weather refresh control. A separate 20-minute cached multi-city snapshot powers the Pakistan weather map.
 - Premium responsive weather-dashboard interface with ordered weather, forecast, Earth observation and climate-analysis sections, subtle motion, hover states, and reduced-motion accessibility.
 - Historical date-range selection and NASA POWER API retrieval.
 - Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
