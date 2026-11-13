@@ -421,6 +421,9 @@ with weather_map_tab:
         with st.spinner("Loading the Pakistan-wide city weather snapshot…"):
             national_records = get_national_weather_snapshot(region_records)
         national_df = pd.DataFrame(national_records)
+        national_df["province"] = national_df["city"].map(
+            lambda name: REGIONS.get(name, {}).get("province", "Pakistan")
+        )
         layer_columns = {
             "Temperature": ("temperature", "Temperature (°C)"),
             "Rainfall": ("precipitation", "Precipitation (mm)"),
@@ -435,7 +438,7 @@ with weather_map_tab:
             hover_name="city",
             hover_data={
                 "condition": True,
-                "province": [REGIONS.get(name, {}).get("province", "Pakistan") for name in national_df["city"]],
+                "province": True,
                 layer_label: ":.1f",
                 "latitude": False,
                 "longitude": False,
