@@ -16,7 +16,7 @@ from src.nasa_power import fetch_daily, save_city_data
 from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
-from src.live_weather import get_current_conditions, get_weather_forecast, commercial_api_configured, WEATHER_CODES
+from src.live_weather import get_current_conditions, get_weather_forecast, get_national_weather_snapshot, commercial_api_configured, WEATHER_CODES
 
 
 def weather_symbol(code):
@@ -398,7 +398,105 @@ except Exception as exc:
 if not commercial_api_configured():
     st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_allow_html=True)
-globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  Earth view", "🛰️  Satellite imagery", "📍  City directory"])
+weather_map_tab, globe_tab, satellite_tab, cities_tab = st.tabs(["🌦️  Pakistan weather map", "🌐  Earth view", "🛰️  Satellite imagery", "📍  City directory"])
+with weather_map_tab:
+    st.caption("Model-based current weather across the mapped Pakistan city directory · Select a layer to recolour the map")
+    map_control, map_refresh = st.columns([3, 1])
+    with map_control:
+        map_layer = st.selectbox(
+            "Weather layer",
+            ["Temperature", "Rainfall", "Humidity", "Wind speed"],
+            key="national_weather_layer"
+        )
+    with map_refresh:
+        st.write("")
+        refresh_national = st.button("↻ Refresh map", use_container_width=True, key="refresh_national_map")
+    if refresh_national:
+        get_national_weather_snapshot.clear()
+    region_records = tuple(
+        (name, info["latitude"], info["longitude"])
+        for name, info in REGIONS.items()
+    )
+    try:
+        with st.spinner("Loading the Pakistan-wide city weather snapshot…"):
+            national_records = get_national_weather_snapshot(region_records)
+        national_df = pd.DataFrame(national_records)
+        layer_columns = {
+            "Temperature": ("temperature", "Temperature (°C)"),
+            "Rainfall": ("precipitation", "Precipitation (mm)"),
+            "Humidity": ("humidity", "Relative humidity (%)"),
+            "Wind speed": ("wind_speed", "Wind speed (km/h)"),
+        }
+        layer_key, layer_label = layer_columns[map_layer]
+        national_df[layer_label] = pd.to_numeric(national_df[layer_key], errors="coerce")
+        map_fig = px.scatter_geo(
+            national_df.dropna(subset=[layer_label]),
+            lat="latitude", lon="longitude", color=layer_label,
+            hover_name="city",
+            hover_data={
+                "condition": True,
+                "province": [REGIONS.get(name, {}).get("province", "Pakistan") for name in national_df["city"]],
+                layer_label: ":.1f",
+                "latitude": False,
+                "longitude": False,
+            },
+            color_continuous_scale="Turbo",
+            labels={layer_label: layer_label},
+        )
+        selected_point = national_df[national_df["city"] == city]
+        if not selected_point.empty:
+            map_fig.add_trace(go.Scattergeo(
+                lat=selected_point["latitude"], lon=selected_point["longitude"],
+                mode="markers", name="Selected city",
+                marker=dict(size=13, color="#ffffff", symbol="star",
+                            line=dict(width=2, color="#10263b")),
+                hovertemplate=f"<b>{city}</b><br>Selected location<extra></extra>",
+            ))
+        map_fig.update_geos(
+            scope="asia", projection_type="natural earth",
+            center={"lat": 29.5, "lon": 69.5},
+            lataxis_range=[23, 38], lonaxis_range=[60, 78],
+            showland=True, landcolor="#10283b",
+            showocean=True, oceancolor="#071522",
+            showcountries=True, countrycolor="#31536b",
+            showcoastlines=True, coastlinecolor="#31536b",
+            showframe=False, bgcolor="rgba(0,0,0,0)"
+        )
+        map_fig.update_traces(marker=dict(size=9, opacity=.9,
+                                           line=dict(width=.6, color="#d7f8ff")),
+                              selector=dict(type="scattergeo", name=None))
+        map_fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#b7cbd9", family="DM Sans"),
+            margin=dict(l=0, r=0, t=8, b=0), height=520,
+            legend=dict(orientation="h", y=1.05, x=0),
+            coloraxis_colorbar=dict(title=layer_label)
+        )
+        st.plotly_chart(map_fig, use_container_width=True,
+                        config={"displayModeBar": False, "responsive": True})
+        st.caption(
+            f"{len(national_df)} mapped cities · Selected layer: {layer_label} · "
+            f"Provider: {national_df['provider_time'].dropna().iloc[0] if national_df['provider_time'].notna().any() else 'time unavailable'} · "
+            "Model-derived estimates, not weather-station observations."
+        )
+        display_cols = ["city", "condition", "temperature", "humidity", "precipitation", "wind_speed"]
+        st.dataframe(
+            national_df[display_cols].rename(columns={
+                "city": "City", "condition": "Conditions",
+                "temperature": "Temperature °C", "humidity": "Humidity %",
+                "precipitation": "Precipitation mm", "wind_speed": "Wind km/h"
+            }),
+            use_container_width=True, hide_index=True
+        )
+        st.download_button(
+            "↓ Download Pakistan city weather snapshot (CSV)",
+            national_df.to_csv(index=False),
+            "earthwise_pakistan_city_weather.csv", "text/csv",
+            use_container_width=True
+        )
+    except Exception as exc:
+        st.warning(f"Pakistan-wide weather map is temporarily unavailable: {exc}")
+
 with globe_tab:
     st.caption("Interactive textured Earth · City markers · Drag to rotate and scroll to zoom")
     render_earth_globe(city)
