@@ -31,11 +31,56 @@ def render_earth_globe(selected_city):
     html = """<!doctype html><html><head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
-        html,body{margin:0;background:#06111d;color:#dff7ff;font-family:Arial,sans-serif;overflow:hidden}
-        #globe{width:100%;height:530px;cursor:grab}
-        .hint{position:absolute;left:18px;bottom:12px;font-size:11px;letter-spacing:.08em;color:#91b6c9;pointer-events:none}
-        .load{position:absolute;inset:0;display:grid;place-items:center;color:#8ceafa;font-size:13px;letter-spacing:.12em}
-      </style></head><body>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap');
+:root{--navy:#092b52;--blue:#075da8;--sky:#eaf4fc;--line:#d7e3ef;--ink:#17324d;--muted:#637b91}
+html,body,[class*="css"]{font-family:'Inter',sans-serif}
+.stApp{background:#f3f7fb;color:var(--ink)}
+[data-testid="stHeader"]{background:rgba(243,247,251,.94);backdrop-filter:blur(12px)}
+[data-testid="stSidebar"]{background:#fff;border-right:1px solid #dce6f0}
+[data-testid="stSidebar"] *{color:#183b5d}
+.block-container{max-width:1480px;padding-top:1.15rem;padding-bottom:3rem}
+h1,h2,h3,h4{font-family:'Manrope',sans-serif!important;color:#12395f;letter-spacing:-.025em}
+.ew-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding:13px 18px;background:#fff;border:1px solid #dce6ef;border-radius:12px;box-shadow:0 3px 14px rgba(15,55,90,.045)}
+.ew-brand{font:800 .92rem 'Manrope';letter-spacing:.08em;color:#0b3763}
+.ew-brand span{color:#0782c9}
+.ew-live{display:inline-flex;align-items:center;gap:8px;border:1px solid #cce7dc;background:#effaf4;border-radius:6px;padding:7px 11px;color:#16744b;font-size:.68rem;letter-spacing:.07em;font-weight:700}
+.ew-live i{width:7px;height:7px;background:#20a36b;border-radius:50%}
+.ew-hero{position:relative;overflow:hidden;border:0;border-radius:12px;padding:clamp(25px,4vw,42px);background:linear-gradient(112deg,#073568 0%,#075da8 58%,#1687c6 100%);margin-bottom:18px;box-shadow:0 9px 24px rgba(9,57,100,.13)}
+.ew-hero:before{content:'';position:absolute;right:-90px;top:-180px;width:430px;height:430px;border:1px solid rgba(255,255,255,.19);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.045),0 0 0 58px rgba(255,255,255,.035);pointer-events:none}
+.ew-eyebrow{position:relative;color:#bce8ff;font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.ew-title{position:relative;font:800 clamp(2rem,4.5vw,3.45rem)/1.06 'Manrope';letter-spacing:-.055em;color:#fff;margin:12px 0;max-width:800px}
+.ew-sub{position:relative;color:#e0f1ff;max-width:780px;line-height:1.65;font-size:.96rem}
+.ew-hero-foot{position:relative;display:flex;gap:8px;flex-wrap:wrap;margin-top:19px}
+.ew-chip{border:1px solid rgba(255,255,255,.27);background:rgba(255,255,255,.1);padding:7px 10px;border-radius:5px;color:#fff;font-size:.67rem;letter-spacing:.045em;font-weight:600}
+.ew-section{font:800 1.13rem 'Manrope';color:#12395f;margin:1.3rem 0 .65rem;padding-left:11px;border-left:4px solid #1685c5}
+.ew-muted{color:#637b91;font-size:.8rem}
+.ew-panel{border:1px solid #dbe6ef;border-radius:10px;background:#fff;padding:17px 18px;box-shadow:0 3px 12px rgba(18,57,95,.035)}
+.ew-panel-label{color:#627d94;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
+.ew-panel-value{font:800 1.35rem 'Manrope';color:#124c7d;margin-top:8px}
+.ew-panel-note{color:#6b8195;font-size:.74rem;margin-top:4px}
+div[data-testid="stMetric"]{background:#fff;border:1px solid #dce6ef;border-radius:10px;padding:13px 15px;box-shadow:0 3px 12px rgba(18,57,95,.035)}
+div[data-testid="stMetricLabel"]{color:#627b91}
+div[data-testid="stMetricValue"]{color:#123f69;font-family:'Manrope',sans-serif;font-weight:800}
+div.stButton>button,div.stDownloadButton>button{border-radius:7px;border:1px solid #075da8;background:#075da8;color:#fff;font-weight:700;min-height:2.65rem;transition:all .18s ease}
+div.stButton>button:hover,div.stDownloadButton>button:hover{background:#064b88;border-color:#064b88;color:#fff;box-shadow:0 5px 14px rgba(7,93,168,.16)}
+.stSelectbox>div>div,.stNumberInput>div>div,.stTextInput>div>div{background:#fff;border-color:#cbd9e6;border-radius:7px}
+.stTabs [data-baseweb="tab-list"]{gap:4px;border-bottom:1px solid #d7e3ef;background:#e9f1f8;padding:5px;border-radius:8px}
+.stTabs [data-baseweb="tab"]{border-radius:6px 6px 0 0;color:#315979;padding:10px 15px;font-weight:700}
+.stTabs [aria-selected="true"]{color:#075da8!important;background:#fff!important}
+[data-testid="stExpander"]{border:1px solid #d7e3ef;border-radius:9px;background:#fff}
+.stAlert{border-radius:8px}
+.ew-ai-card{border:1px solid #cfe0ed;border-radius:10px;background:linear-gradient(110deg,#fff,#eff7fd);padding:19px 21px;box-shadow:0 4px 15px rgba(18,57,95,.05);position:relative;overflow:hidden}
+.ew-ai-card:before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:#0782c9}
+.ew-ai-kicker{color:#0873b3;font-size:.65rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.ew-ai-heading{font:800 1.2rem 'Manrope';color:#12395f;margin:7px 0 5px}
+.ew-ai-description{color:#58748d;font-size:.8rem;line-height:1.6}
+.ew-founder{color:#71869a;font-size:.68rem;letter-spacing:.04em;text-align:center;padding:14px 0 4px}
+.ew-founder strong{color:#244f73;font-weight:700}
+[data-testid="stDataFrame"]{border:1px solid #dce6ef;border-radius:8px}
+footer{visibility:hidden}
+@media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.05rem}.ew-hero{padding:22px 18px}.ew-top{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style></head><body>
       <div id="globe"><div class="load" id="load">INITIALIZING EARTH VISUALIZATION…</div></div>
       <div class="hint">DRAG TO ROTATE · SCROLL TO ZOOM · HOVER OVER PINS</div>
       <script src="https://unpkg.com/globe.gl"></script>
@@ -193,15 +238,15 @@ footer{visibility:hidden}
 
 st.markdown("""
 <div class="ew-top">
-  <div class="ew-brand">EARTHWISE <span>AI</span> &nbsp; / &nbsp; EARTH INTELLIGENCE</div>
-  <div class="ew-live"><i></i> PLATFORM READY &nbsp;·&nbsp; DATA ON DEMAND</div>
+  <div class="ew-brand">EARTHWISE <span>AI</span> <span style="color:#7892a8;font-weight:500">| PAKISTAN WEATHER & CLIMATE</span></div>
+  <div class="ew-live"><i></i> WEATHER DATA SERVICES</div>
 </div>
 <section class="ew-hero">
-  <div class="ew-eyebrow">PAKISTAN CLIMATE INTELLIGENCE PLATFORM</div>
-  <div class="ew-title">See the signals.<br>Understand our planet.</div>
-  <div class="ew-sub">Explore historical climate patterns across Pakistan through NASA POWER data, transparent statistical analysis, and an evidence-led AI Earth Scientist.</div>
+  <div class="ew-eyebrow">PAKISTAN WEATHER & EARTH INTELLIGENCE</div>
+  <div class="ew-title">Weather updates.<br>Climate insight for Pakistan.</div>
+  <div class="ew-sub">Explore current model-based weather conditions, NASA satellite imagery, and historical climate indicators for cities across Pakistan — in one clear national dashboard.</div>
   <div class="ew-hero-foot">
-    <span class="ew-chip">NASA POWER DATA</span><span class="ew-chip">PROVINCE-WIDE EXPLORATION</span><span class="ew-chip">SCIENTIFIC CONTEXT</span>
+    <span class="ew-chip">CURRENT CONDITIONS</span><span class="ew-chip">NASA SATELLITE IMAGERY</span><span class="ew-chip">HISTORICAL CLIMATE ANALYSIS</span>
   </div>
 </section>
 """, unsafe_allow_html=True)
@@ -271,7 +316,7 @@ if df is None:
             df = cached
 
 st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_allow_html=True)
-globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  3D Earth", "🛰️  NASA Satellite", "📍  Pakistan Cities"])
+globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  Earth view", "🛰️  Satellite imagery", "📍  City directory"])
 with globe_tab:
     st.caption("Interactive textured Earth · City markers · Drag to rotate and scroll to zoom")
     render_earth_globe(city)
@@ -359,7 +404,7 @@ m2.metric("Valid daily records", f"{meta['valid_rows']:,}")
 m3.metric("Monthly observations", f"{len(monthly):,}")
 m4.metric("Analysis window", f"{start_year if 'start_year' in locals() else monthly['year'].min()}–{end_year if 'end_year' in locals() else monthly['year'].max()}")
 
-tab_overview, tab_trends, tab_data = st.tabs(["◈  Overview", "⌁  Trend analysis", "▤  Data explorer"])
+tab_overview, tab_trends, tab_data = st.tabs(["◈  Climate overview", "⌁  Trend assessment", "▤  Data explorer"])
 with tab_overview:
     st.markdown('<div class="ew-section">Climate signal over time</div>', unsafe_allow_html=True)
     fig = px.area(monthly, x="date", y=variable, labels={"date":"Month",variable:f"{spec['label']} ({analysis_unit})"})
