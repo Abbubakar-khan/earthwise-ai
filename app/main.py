@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 from src.regions import REGIONS, VARIABLES
 from src.nasa_power import fetch_daily
 from src.cleaning import monthly_aggregate, coverage_summary
+from src.climate_fingerprint import build_climate_fingerprint
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
 from src.live_weather import get_current_conditions, commercial_api_configured
@@ -387,6 +388,30 @@ button:disabled{opacity:.48!important;filter:saturate(.55)}
  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 
+
+/* Performance guardrails: keep large data surfaces crisp and inexpensive to composite. */
+[data-testid="stDataFrame"],[data-testid="stTable"]{
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
+}
+[data-testid="stMetric"],[data-testid="stExpander"],[data-testid="stChatMessage"]{
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.stButton>button,[data-testid="stDownloadButton"]>button,[data-testid="stFormSubmitButton"]>button{
+ min-height:44px;white-space:normal;line-height:1.25;
+}
+.stButton>button:focus-visible,[data-testid="stDownloadButton"]>button:focus-visible,
+[data-testid="stFormSubmitButton"]>button:focus-visible{
+ outline:2px solid #a4f0c5!important;outline-offset:3px!important;
+}
+@media(max-width:700px){
+ [data-testid="stDataFrame"],[data-testid="stTable"]{border-radius:10px}
+ .stButton>button,[data-testid="stDownloadButton"]>button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .ew-card:hover,.stButton>button:hover{transform:none!important}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -607,6 +632,51 @@ elif page == "Climate Intelligence":
         )
         st.plotly_chart(chart, use_container_width=True, config={"displaylogo": False, "responsive": True})
         st.caption("Monthly precipitation is summed; all other indicators are monthly means.")
+
+        # A seasonality-aware fingerprint: compare each month only with that
+        # calendar month's historical distribution for this selected record.
+        st.markdown('<div class="ew-section">Pakistan Climate Fingerprint</div>', unsafe_allow_html=True)
+        fingerprint = build_climate_fingerprint(monthly, variable)
+        if not fingerprint.empty:
+            years_covered = len(fingerprint.index)
+            st.markdown(
+                '<div class="ew-muted">A year-by-month climate signature. Each cell shows how unusual that month was '
+                'relative to the same calendar month across the selected record, in standard deviations. '
+                'This highlights unusual seasonal departures without confusing summer and winter.</div>',
+                unsafe_allow_html=True,
+            )
+            fingerprint_fig = px.imshow(
+                fingerprint,
+                color_continuous_scale="RdBu_r",
+                color_continuous_midpoint=0,
+                zmin=-2,
+                zmax=2,
+                aspect="auto",
+                labels={"x": "Calendar month", "y": "Year", "color": "Anomaly (σ)"},
+            )
+            fingerprint_fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(7,20,34,.25)",
+                font=dict(family="DM Sans", color="#b7cbd9"),
+                margin=dict(l=8, r=8, t=12, b=8),
+                height=max(260, min(560, 110 + years_covered * 22)),
+                coloraxis_colorbar=dict(title="σ", thickness=12, len=.82),
+            )
+            fingerprint_fig.update_xaxes(side="top", showgrid=False)
+            fingerprint_fig.update_yaxes(autorange="reversed", showgrid=False)
+            st.plotly_chart(
+                fingerprint_fig,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True},
+            )
+            st.caption(
+                "Method: calendar-month z-scores from the selected NASA POWER record. "
+                "At least three valid years are required; constant or undersampled months are left blank. "
+                "This is an exploratory anomaly view, not an official climate-normal or attribution product."
+            )
+        else:
+            st.info("Climate Fingerprint needs at least three years of valid monthly observations.")
+
         st.markdown('<div class="ew-section">Trend assessment</div>', unsafe_allow_html=True)
         if trend and trend.get("status") == "ok":
             t1, t2, t3, t4 = st.columns(4)
