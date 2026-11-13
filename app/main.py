@@ -255,6 +255,7 @@ with st.sidebar:
     default_city = "Lahore" if "Lahore" in city_options else city_options[0]
     city = st.selectbox("City", city_options, index=city_options.index(default_city))
     st.caption(f"{REGIONS[city]['province']} · {REGIONS[city]['latitude']:.4f}° N, {REGIONS[city]['longitude']:.4f}° E")
+    st.link_button("Official PMD weather portal", "https://weather.gov.pk/", use_container_width=True)
     st.caption(f"Directory: {len(REGIONS)} mapped urban centres · PBS Census 2023 records 657 urban localities nationally.")
     st.divider()
     st.markdown("### Climate signal")
@@ -336,7 +337,11 @@ try:
         day_cols = st.columns(min(4, day_count - offset))
         for col, i in zip(day_cols, range(offset, min(offset + 4, day_count))):
             code = daily.get("weather_code", [None] * day_count)[i]
-            condition = WEATHER_CODES.get(int(code), "Conditions unavailable") if code is not None else "Conditions unavailable"
+            try:
+                code_int = int(code) if code is not None and pd.notna(code) else None
+            except (TypeError, ValueError):
+                code_int = None
+            condition = WEATHER_CODES.get(code_int, "Conditions unavailable")
             symbol = weather_symbol(code)
             day_label = pd.to_datetime(daily["time"][i]).strftime("%a, %d %b")
             high = daily.get("temperature_2m_max", [None] * day_count)[i]
