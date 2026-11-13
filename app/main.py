@@ -227,6 +227,41 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 [data-testid="stChatMessage"]{background:rgba(12,29,46,.72);border:1px solid var(--line);border-radius:14px}
 [data-testid="stChatInput"]{border-color:rgba(103,220,235,.28)}
 .ew-footer{color:#718da3;font-size:.67rem;letter-spacing:.07em;text-align:center;padding:20px 0 5px}
+/* EARTHWISE signature system — deep-ocean base, living-green accents */
+:root{--ew-ink:#06111d;--ew-surface:#0b1c2b;--ew-surface-raised:#102638;--ew-green:#74d6a0;--ew-text:#eff8fb;--ew-muted:#9ab3c3}
+.stApp{background:radial-gradient(ellipse at 82% 4%,rgba(38,154,133,.13),transparent 29%),radial-gradient(ellipse at 8% 38%,rgba(37,111,159,.12),transparent 34%),linear-gradient(145deg,#050d17 0%,#081725 52%,#071522 100%)}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#0b1d2b 0%,#081522 58%,#07121d 100%);border-right:1px solid rgba(112,185,194,.18)}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2{letter-spacing:-.04em;font-size:1.24rem}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"]{color:#86a7b8;letter-spacing:.035em}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label{min-height:42px;display:flex;align-items:center;border-radius:11px;padding:8px 12px;margin:3px 0;border:1px solid transparent;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover{background:rgba(93,202,184,.075);border-color:rgba(116,214,160,.16);transform:translateX(2px)}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:linear-gradient(100deg,rgba(48,151,142,.22),rgba(42,112,147,.12));border-color:rgba(116,214,160,.34);box-shadow:inset 3px 0 0 #74d6a0,0 6px 18px rgba(0,0,0,.12)}
+.ew-hero{border-color:rgba(112,205,184,.24);background:radial-gradient(circle at 88% 18%,rgba(72,189,160,.15),transparent 30%),linear-gradient(112deg,rgba(12,43,57,.98),rgba(8,27,43,.97) 62%,rgba(8,39,43,.92));box-shadow:0 18px 55px rgba(0,0,0,.18)}
+.ew-eyebrow{color:#86e2bd}
+.ew-chip{border-color:rgba(116,214,160,.22);background:rgba(9,38,43,.55);color:#c3f0dd}
+.ew-status{border-color:rgba(116,214,160,.28);background:rgba(23,91,73,.2);color:#b8efd3}
+.ew-card{border-color:rgba(130,190,207,.18);background:linear-gradient(145deg,rgba(15,39,55,.94),rgba(8,25,40,.96));box-shadow:0 12px 32px rgba(0,0,0,.15)}
+.ew-card:hover{border-color:rgba(116,214,160,.34);box-shadow:0 16px 36px rgba(0,0,0,.2),0 0 0 1px rgba(116,214,160,.05)}
+.ew-section:before{background:linear-gradient(180deg,#83e2b2,#4bbbc8);box-shadow:0 0 14px rgba(116,214,160,.22)}
+.ew-ai-banner{border-color:rgba(116,214,160,.27);background:linear-gradient(115deg,rgba(13,66,63,.5),rgba(10,29,46,.96) 68%)}
+.ew-ai-kicker{color:#8ce3b9}
+.ew-empty{border-color:rgba(116,214,160,.28);background:linear-gradient(145deg,rgba(12,43,51,.48),rgba(8,25,40,.55))}
+.ew-empty-icon{color:#8ce3b9}
+.stButton>button,[data-testid="stDownloadButton"]>button{border-radius:10px;border:1px solid rgba(116,214,160,.34);background:linear-gradient(110deg,#176c62,#155a72);color:#f2fffb;font-weight:700;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease;box-shadow:0 7px 20px rgba(12,95,87,.16)}
+.stButton>button:hover,[data-testid="stDownloadButton"]>button:hover{border-color:rgba(143,235,190,.7);filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 10px 25px rgba(20,126,105,.22)}
+.stButton>button:focus-visible,button:focus-visible{outline:2px solid #8ce3b9!important;outline-offset:3px!important}
+[data-baseweb="select"]>div,[data-baseweb="input"]>div,[data-testid="stDateInput"] input,[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{border-color:rgba(130,190,207,.23)!important;border-radius:10px!important;background-color:rgba(8,25,40,.76)!important}
+[data-baseweb="select"]>div:focus-within,[data-baseweb="input"]>div:focus-within{border-color:rgba(116,214,160,.65)!important;box-shadow:0 0 0 2px rgba(116,214,160,.1)!important}
+div[data-testid="stMetric"]{border:1px solid rgba(130,190,207,.16);border-radius:14px;padding:15px 16px;background:linear-gradient(145deg,rgba(15,39,55,.9),rgba(8,25,40,.94))}
+div[data-testid="stMetric"] label{color:#a8c2d0!important}
+div[data-testid="stMetric"] [data-testid="stMetricValue"]{color:#f2fbff!important;font-family:'Space Grotesk',sans-serif}
+[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid rgba(130,190,207,.18);border-radius:12px;overflow:hidden}
+[data-testid="stExpander"]{border:1px solid rgba(130,190,207,.17);border-radius:12px;background:rgba(9,27,42,.48)}
+[data-testid="stTabs"] button[role="tab"]{border-radius:9px 9px 0 0;font-weight:600}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{color:#9ce7c2;border-bottom-color:#74d6a0}
+hr{border-color:rgba(130,190,207,.14)!important}
+a{color:#83dfc0!important}
+@media(max-width:700px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{border-radius:16px}.ew-status{white-space:normal;line-height:1.5}div[data-testid="stMetric"]{padding:11px}}
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
