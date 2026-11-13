@@ -204,8 +204,10 @@ PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "AI A
 with st.sidebar:
     st.markdown("## 🌍 EARTHWISE AI")
     st.caption("PAKISTAN EARTH INTELLIGENCE · FORGE CYBER LAB")
-    page = st.radio("Navigate", PAGES, index=PAGES.index(st.session_state.get("page", "Overview")), label_visibility="collapsed")
-    st.session_state.page = page
+    # Keyed radio: Streamlit owns the navigation state. (The previous
+    # index-from-session-state pattern made the radio snap back to the old
+    # page on some reruns / in AppTest navigation.)
+    page = st.radio("Navigate", PAGES, key="page", label_visibility="collapsed")
     st.divider()
     st.markdown("### Location")
     provinces = ["All regions"] + sorted({v["province"] for v in REGIONS.values()})
