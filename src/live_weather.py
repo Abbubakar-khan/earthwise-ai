@@ -73,3 +73,42 @@ def get_current_conditions(latitude: float, longitude: float, city: str) -> dict
     current["provider_time"] = current.get("time", "Time unavailable")
     current["source"] = "Open-Meteo commercial API" if api_key else "Open-Meteo free evaluation API"
     return current
+
+
+
+@st.cache_data(ttl=30 * 60, show_spinner=False)
+def get_weather_forecast(latitude: float, longitude: float) -> dict:
+    """Fetch a seven-day model forecast and 24-hour hourly outlook."""
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover",
+        "hourly": "temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,uv_index_max",
+        "forecast_days": 7,
+        "forecast_hours": 24,
+        "timezone": "auto",
+        "temperature_unit": "celsius",
+        "wind_speed_unit": "kmh",
+        "precipitation_unit": "mm",
+    }
+    api_key = _get_api_key()
+    api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
+    if api_key:
+        params["apikey"] = api_key
+    response = requests.get(api_url, params=params, timeout=25)
+    response.raise_for_status()
+    payload = response.json()
+    daily = payload.get("daily")
+    hourly = payload.get("hourly")
+    if not isinstance(daily, dict) or not daily.get("time"):
+        raise ValueError("The weather provider returned no daily forecast.")
+    if not isinstance(hourly, dict) or not hourly.get("time"):
+        raise ValueError("The weather provider returned no hourly forecast.")
+    return {
+        "daily": daily,
+        "hourly": hourly,
+        "timezone": payload.get("timezone", "Local time"),
+        "source": "Open-Meteo commercial API" if api_key else "Open-Meteo free evaluation API",
+        "forecast_generated_at": payload.get("current", {}).get("time", "Unavailable"),
+    }
