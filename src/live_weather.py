@@ -126,7 +126,7 @@ def get_national_weather_snapshot(region_records: tuple[tuple[str, float, float]
         params = {
             "latitude": ",".join(str(item[1]) for item in chunk),
             "longitude": ",".join(str(item[2]) for item in chunk),
-            "current": "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
+            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
             "timezone": "auto",
             "temperature_unit": "celsius",
             "wind_speed_unit": "kmh",
@@ -150,6 +150,7 @@ def get_national_weather_snapshot(region_records: tuple[tuple[str, float, float]
                 "latitude": latitude,
                 "longitude": longitude,
                 "temperature": current.get("temperature_2m"),
+                "apparent_temperature": current.get("apparent_temperature"),
                 "humidity": current.get("relative_humidity_2m"),
                 "precipitation": current.get("precipitation"),
                 "wind_speed": current.get("wind_speed_10m"),
