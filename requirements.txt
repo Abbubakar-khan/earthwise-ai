@@ -1,5 +1,4 @@
-# Python 3.14-compatible deployment dependencies for Streamlit Community Cloud.
-# These versions have prebuilt wheels for current Community Cloud Python runtimes.
+# Deployment runtime is pinned to Python 3.12 in runtime.txt.
 streamlit==1.66.0
 pandas>=2.3.3,<4
 numpy>=2.3,<2.7
