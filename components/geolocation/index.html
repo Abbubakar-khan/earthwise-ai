@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style>
+</head>
+<body>
+<script type="module">
+import { Streamlit } from "./streamlit.js";
+
+// EarthWise AI — auto location detect (custom component).
+//
+// Why a component instead of a components.html snippet: the snippet iframe's
+// sandbox has no allow-top-navigation, so it cannot pass coordinates back
+// to the app (verified 2026-11-14: window.parent.location.href throws).
+// This component uses Streamlit's own postMessage bridge
+// (Streamlit.setComponentValue), which the sandbox does not block, and the
+// iframe's allow list includes geolocation, so navigator.geolocation works.
+//
+// Contract with app/main.py:
+//   args:   { request: bool, request_id: int }
+//           request=True asks for a (fresh) detection; request_id changes
+//           on every new request so this iframe re-arms even if it already
+//           served one (iframes persist across Streamlit reruns).
+//   value:  { status: "ok"|"denied"|"timeout"|"unavailable",
+//             latitude: number|null, longitude: number|null }
+//           sent once per request via setComponentValue (which reruns the
+//           app). Coordinates are rounded to 5 decimals (~1 m).
+// The component never navigates, never stores anything, and never calls
+// any API itself — reverse-geocoding happens server-side in Python.
+let lastRequestId = null;
+let attempted = false;
+let reported = false;
+
+function report(status, lat, lon) {
+  if (reported) return;
+  reported = true;
+  Streamlit.setComponentValue({
+    status: status,
+    latitude: (lat === null || lat === undefined) ? null : Math.round(lat * 100000) / 100000,
+    longitude: (lon === null || lon === undefined) ? null : Math.round(lon * 100000) / 100000
+  });
+}
+
+function requestLocation() {
+  if (attempted) return;
+  attempted = true;
+  if (!navigator.geolocation) { report("unavailable", null, null); return; }
+  navigator.geolocation.getCurrentPosition(
+    function (pos) { report("ok", pos.coords.latitude, pos.coords.longitude); },
+    function (err) {
+      var s = "denied";
+      if (err && err.code === 3) s = "timeout";
+      else if (err && err.code === 2) s = "unavailable";
+      report(s, null, null);
+    },
+    { timeout: 10000, maximumAge: 600000, enableHighAccuracy: false }
+  );
+}
+
+Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, function (event) {
+  var args = (event.detail && event.detail.args) || {};
+  Streamlit.setFrameHeight(0);
+  // A new request_id means Python asked for a fresh detection (first load
+  // or the "Use my location" button) — arm a new attempt even though this
+  // iframe may have served an earlier one.
+  if (args.request_id !== undefined && args.request_id !== lastRequestId) {
+    lastRequestId = args.request_id;
+    attempted = false;
+    reported = false;
+  }
+  if (args.request) requestLocation();
+});
+Streamlit.setComponentReady();
+Streamlit.setFrameHeight(0);
+</script>
+</body>
+</html>
