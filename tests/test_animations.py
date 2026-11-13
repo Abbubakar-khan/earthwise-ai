@@ -59,13 +59,36 @@ def test_hero_symbol_uses_animation_class():
 
 def test_intro_splash_is_branded_and_names_real_sources():
     out = intro_html()
-    assert "EARTHWISE" in out and "Pakistan Earth Intelligence" in out
+    # Title is per-letter spans now (fly-in), so check the letters, not the
+    # contiguous word.
+    assert all(f">{ch}</span>" in out for ch in "EARTHWISEAI")
+    assert "Pakistan Earth Intelligence" in out
     assert "NASA POWER" in out and "OPEN-METEO" in out and "CAMS" in out
     assert "ew-intro" in out and "ew-intro-bar" in out
     assert "<script>" not in out
     assert "@keyframes introBar" in INTRO_CSS
     assert "@keyframes introFadeOut" in INTRO_CSS
     assert "prefers-reduced-motion" in INTRO_CSS
+
+
+def test_intro_title_flies_in_letter_by_letter():
+    """Intro fly-in (2026-11-14): the title is per-letter spans with
+    staggered delays, driven by the introFlyIn keyframe; the 'AI' letters
+    keep the accent colour; reduced-motion users get no delay either."""
+    out = intro_html()
+    assert out.count("ew-intro-letter") == 11  # EARTHWISE (9) + AI (2)
+    assert out.count("ew-intro-ai") == 2
+    assert "animation-delay:50ms" in out
+    assert "animation-delay:700ms" in out
+    assert ">E</span>" in out and ">I</span>" in out
+    # Letters are separate spans now, so the plain contiguous word is gone
+    # from the markup (the visible text still reads EARTHWISE AI).
+    assert "EARTHWISE <span>AI</span>" not in out
+    assert "@keyframes introFlyIn" in INTRO_CSS
+    assert "translateY(-56px)" in INTRO_CSS
+    assert ".ew-intro-letter" in INTRO_CSS
+    assert "introFadeOut .6s ease 3.1s" in INTRO_CSS  # splash stays ~3s, fades after
+    assert "animation-delay:0ms!important" in INTRO_CSS  # reduced-motion: no stagger
 
 
 def test_animation_css_respects_reduced_motion_and_mobile():
