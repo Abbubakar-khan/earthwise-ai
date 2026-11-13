@@ -134,8 +134,9 @@ def render_nasa_satellite_map(imagery_date, layer_id, layer_name, attribution, o
       const opacity = __OPACITY__;
       document.getElementById('stamp').textContent = layerName + ' / ' + mapDate;
       const map = L.map('map',{zoomControl:true,worldCopyJump:true}).setView([29.5,69.5],5);
+      const tileExt = layerId.indexOf('IMERG_') === 0 ? 'png' : 'jpg';
       const tileUrl = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
-        layerId + '/default/' + mapDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+        layerId + '/default/' + mapDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.' + tileExt;
       L.tileLayer(tileUrl,{maxZoom:9,opacity:opacity,crossOrigin:true,
         attribution:attribution + ' · NASA GIBS'}).addTo(map);
       const pins = L.featureGroup();
