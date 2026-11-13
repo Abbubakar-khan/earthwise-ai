@@ -1,3 +1,12 @@
+# EARTHWISE AI — Premium Rebuild (2026-11-14)
+
+> **Start here for the hackathon demo:** see [`REBUILD_NOTES.md`](REBUILD_NOTES.md) — what changed, what was tested, and what credentials you need (answer: none, except optionally `OPEN_METEO_API_KEY` for commercial weather use).
+>
+> **Run it:** `pip install -r requirements.txt && streamlit run app/main.py` — full instructions in REBUILD_NOTES.md.
+> **New in this rebuild:** 7-page premium dashboard (Overview · Climate Analytics · Air Quality · Weather & Maps · AI Assistant · Risk & Outlook · Data & Downloads), live CAMS air quality (US AQI gauge, PM2.5/PM10, 24 h chart), transparent risk screening, 10-year Sen-slope projection, evidence-bound AI assistant, multi-city comparison, responsive mobile layout, error handling + loading states on every live call.
+> **Verified 2026-11-14:** 11/11 pytest passed, Streamlit HTTP 200, live NASA POWER / Open-Meteo / CAMS calls working. Lahore demo data included in `data/raw/` (T2M 2015–2025, 100% coverage). Honest result from that run: Lahore T2M trend −1.34 °C/decade, p = 0.52 (not significant) — do not claim warming from this period/test.
+
+---
 # EARTHWISE AI — The Intelligent Earth Trend Observatory
 
 **FORGE CYBER LAB | Pakistan-first | Research prototype**
