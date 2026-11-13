@@ -282,23 +282,41 @@ INTRO_CSS = """
 @keyframes introGlobeSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes introOrbit{from{transform:rotate(0deg) translateX(74px) rotate(0deg)}to{transform:rotate(360deg) translateX(74px) rotate(-360deg)}}
 @keyframes introRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes introFlyIn{0%{opacity:0;transform:translateY(-56px) scale(.92)}60%{opacity:1;transform:translateY(5px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes introBar{from{width:4%}to{width:100%}}
 @keyframes introGlow{0%,100%{box-shadow:0 0 0 0 rgba(126,232,214,.35)}50%{box-shadow:0 0 44px 6px rgba(126,232,214,.28)}}
 @keyframes introFadeOut{to{opacity:0;visibility:hidden}}
-.ew-intro{position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(900px 500px at 50% 18%,rgba(64,190,220,.22),transparent 62%),radial-gradient(700px 420px at 50% 110%,rgba(126,232,214,.14),transparent 60%),#060f18;color:#eef6f9;animation:introFadeOut .55s ease 2.85s forwards}
+.ew-intro{position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(900px 500px at 50% 18%,rgba(64,190,220,.22),transparent 62%),radial-gradient(700px 420px at 50% 110%,rgba(126,232,214,.14),transparent 60%),#060f18;color:#eef6f9;animation:introFadeOut .6s ease 3.1s forwards}
 .ew-intro-globe{position:relative;width:148px;height:148px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 34% 30%,#1d4a63,#0b1d2d 68%);border:1px solid rgba(126,232,214,.35);animation:introGlow 2.2s ease-in-out infinite}
 .ew-intro-globe .ew-intro-earth{font-size:4.4rem;line-height:1;animation:introGlobeSpin 9s linear infinite}
 .ew-intro-orbit{position:absolute;top:50%;left:50%;width:0;height:0}
 .ew-intro-orbit i{position:absolute;top:-5px;left:-5px;width:10px;height:10px;border-radius:50%;background:#7ee8d6;box-shadow:0 0 12px #7ee8d6;animation:introOrbit 2.4s linear infinite}
-.ew-intro-title{margin-top:30px;font:700 clamp(2rem,6vw,3.1rem)/1.05 'Space Grotesk',sans-serif;letter-spacing:.06em;animation:introRise .7s .15s cubic-bezier(.2,.7,.3,1) backwards}
-.ew-intro-title span{color:#7ee8d6}
+.ew-intro-title{margin-top:30px;font:700 clamp(2rem,6vw,3.1rem)/1.05 'Space Grotesk',sans-serif;letter-spacing:.06em}
+.ew-intro-letter{display:inline-block;animation:introFlyIn .55s cubic-bezier(.2,.7,.3,1) backwards}
+.ew-intro-title .ew-intro-ai{color:#7ee8d6}
 .ew-intro-tag{margin-top:12px;color:#b0c2ce;font-size:.92rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;animation:introRise .7s .35s cubic-bezier(.2,.7,.3,1) backwards}
 .ew-intro-sub{margin-top:10px;color:#8299a8;font-size:.8rem;animation:introRise .7s .5s cubic-bezier(.2,.7,.3,1) backwards}
 .ew-intro-bar{width:min(280px,72vw);height:4px;margin-top:30px;border-radius:999px;background:rgba(164,193,211,.18);overflow:hidden;animation:introRise .7s .6s backwards}
 .ew-intro-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#35cce8,#7ee8d6);animation:introBar 2.5s ease forwards}
 .ew-intro-src{margin-top:16px;color:#6d8594;font-size:.68rem;letter-spacing:.14em;animation:introRise .7s .7s backwards}
-@media(prefers-reduced-motion:reduce){.ew-intro *{animation-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){.ew-intro *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 """
+
+
+def _intro_title_html() -> str:
+    """Title letters fly in one by one (staggered delays); 'AI' in accent.
+    Letters are literal strings, so no escaping is needed."""
+    spans = []
+    for i, ch in enumerate("EARTHWISE"):
+        spans.append(
+            f'<span class="ew-intro-letter" style="animation-delay:{50 + i * 70}ms">{ch}</span>'
+        )
+    spans.append(" ")
+    for j, ch in enumerate("AI"):
+        spans.append(
+            f'<span class="ew-intro-letter ew-intro-ai" style="animation-delay:{700 + j * 70}ms">{ch}</span>'
+        )
+    return "".join(spans)
 
 
 def intro_html() -> str:
@@ -309,7 +327,7 @@ def intro_html() -> str:
         '<div class="ew-intro" role="status" aria-label="EarthWise AI loading">'
         '<div class="ew-intro-globe"><span class="ew-intro-earth">🌍</span>'
         '<span class="ew-intro-orbit"><i></i></span></div>'
-        '<div class="ew-intro-title">EARTHWISE <span>AI</span></div>'
+        '<div class="ew-intro-title">' + _intro_title_html() + "</div>"
         '<div class="ew-intro-tag">Pakistan Earth Intelligence</div>'
         '<div class="ew-intro-sub">Climate · Weather · Air Quality — live, for every city</div>'
         '<div class="ew-intro-bar"><i></i></div>'
