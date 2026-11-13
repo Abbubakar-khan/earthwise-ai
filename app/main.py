@@ -230,6 +230,57 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 .ew-forecast-temp{font:700 1.55rem 'Space Grotesk';color:#f4fbff}.ew-forecast-temp span{font-size:1rem;color:#91aabd;font-weight:500}
 .ew-forecast-detail{font-size:.68rem;color:#91aabd;margin-top:6px;line-height:1.4}.ew-forecast-detail b{color:#d8edf8;font-weight:600}
 div[data-testid="stLinkButton"] a{border-radius:10px;border:1px solid rgba(102,227,242,.34);background:linear-gradient(105deg,#126d89,#245ba8);color:#fff;font-weight:700;min-height:2.65rem}
+
+/* EARTHWISE 2026 product polish: clearer hierarchy, quieter chrome, stronger data surfaces. */
+:root{--ew-ink:#07111c;--ew-surface:#0d1d2c;--ew-surface-2:#102538;--ew-border:rgba(151,190,214,.16);--ew-teal:#70e2d0;--ew-ice:#eaf5fb;--ew-dim:#91a9ba}
+[data-testid="stToolbar"],[data-testid="stDecoration"],#MainMenu{visibility:hidden;height:0}
+[data-testid="stHeader"]{height:2.7rem;background:rgba(4,11,20,.82);border-bottom:1px solid rgba(133,181,211,.08)}
+[data-testid="stSidebar"]{min-width:292px!important;max-width:292px!important;background:linear-gradient(180deg,#0b1a29 0%,#081522 100%);border-right:1px solid rgba(130,185,211,.18)}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.65rem}
+[data-testid="stSidebar"] h2{font-size:1.18rem;color:#f0f8fc;letter-spacing:-.03em}
+[data-testid="stSidebar"] h3{font-size:.78rem;color:#8fe5e1;letter-spacing:.13em;text-transform:uppercase}
+[data-testid="stSidebar"] label{font-size:.78rem;color:#afc3d0}
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p{font-weight:600}
+[data-testid="stSidebar"] hr{border-color:rgba(151,190,214,.13);margin:.55rem 0}
+[data-testid="stSidebar"] .stButton>button,[data-testid="stSidebar"] .stLinkButton a{min-height:2.65rem}
+.block-container{max-width:1580px;padding-left:clamp(1rem,2.8vw,3rem);padding-right:clamp(1rem,2.8vw,3rem);padding-top:1.05rem}
+.ew-top{padding:2px 2px 12px;border-bottom:1px solid rgba(151,190,214,.10);margin-bottom:18px}
+.ew-brand{font-size:.88rem;letter-spacing:.16em}
+.ew-live{background:rgba(16,57,73,.22);border-color:rgba(112,226,208,.2);color:#a8e9df}
+.ew-live i{background:var(--ew-teal)}
+.ew-hero{border-radius:22px;background:radial-gradient(ellipse at 88% 45%,rgba(40,135,150,.22),transparent 34%),linear-gradient(118deg,#102b3c 0%,#0b2031 55%,#0b2935 100%);border-color:rgba(112,226,208,.23);box-shadow:0 24px 70px rgba(0,0,0,.22);padding:clamp(26px,4.2vw,50px)}
+.ew-eyebrow{color:#8de7d9;letter-spacing:.22em}
+.ew-title{max-width:850px;line-height:1.0}
+.ew-sub{max-width:710px;font-size:.96rem;color:#b6cbd7}
+.ew-chip{border-radius:999px;border-color:rgba(112,226,208,.22);background:rgba(5,22,32,.42);color:#c0eee7;padding:7px 12px}
+.ew-section{display:flex;align-items:center;gap:10px;margin:1.65rem 0 .8rem;font-size:1.08rem}
+.ew-section:before{content:'';width:3px;height:1.05rem;border-radius:4px;background:linear-gradient(180deg,#70e2d0,#5798ff)}
+div[data-testid="stMetric"]{min-height:112px;border-radius:17px;background:linear-gradient(145deg,rgba(17,42,60,.94),rgba(9,25,40,.96));border-color:rgba(151,190,214,.15);box-shadow:0 9px 25px rgba(0,0,0,.10);padding:16px 17px}
+div[data-testid="stMetricLabel"] p{font-size:.76rem;font-weight:600;letter-spacing:.025em;color:#a7bdca}
+div[data-testid="stMetricValue"]{font-size:1.8rem;font-weight:700;letter-spacing:-.045em}
+div[data-testid="stMetricDelta"]{font-size:.72rem}
+.stTabs [data-baseweb="tab-list"]{gap:6px;padding:5px;background:rgba(5,17,29,.62);border:1px solid rgba(151,190,214,.12);border-radius:13px}
+.stTabs [data-baseweb="tab"]{height:42px;padding:0 15px;border-radius:9px;color:#9fb5c4;font-weight:600}
+.stTabs [aria-selected="true"]{background:linear-gradient(110deg,rgba(33,117,132,.34),rgba(40,86,135,.30))!important;color:#a5f0e7!important}
+.stTabs [data-baseweb="tab-highlight"]{background:#70e2d0;height:2px}
+[data-testid="stPlotlyChart"],[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid rgba(151,190,214,.12);border-radius:15px;overflow:hidden}
+[data-testid="stDataFrame"]{background:rgba(9,24,39,.65)}
+[data-testid="stExpander"]{border-radius:14px;background:rgba(10,27,43,.68)}
+[data-testid="stExpander"] summary{font-weight:600;color:#d7e8f1}
+.stTextInput input,.stNumberInput input{background:rgba(6,19,32,.88)!important;color:#eaf5fb!important;border-color:rgba(151,190,214,.19)!important;border-radius:10px!important}
+.stSelectbox [data-baseweb="select"]>div,.stMultiSelect [data-baseweb="select"]>div{background:rgba(6,19,32,.88);border-color:rgba(151,190,214,.19);border-radius:10px}
+.stButton>button,.stDownloadButton>button,.stLinkButton a{border-radius:11px!important;font-weight:700;letter-spacing:.01em}
+.stButton>button[kind="primary"]{background:linear-gradient(110deg,#168c8b,#246ab4);border:1px solid rgba(125,232,221,.42)}
+.stButton>button:focus-visible,.stDownloadButton>button:focus-visible{outline:2px solid #70e2d0;outline-offset:3px}
+hr{border-color:rgba(151,190,214,.12)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:#07111c}
+::-webkit-scrollbar-thumb{background:#29465a;border-radius:20px;border:2px solid #07111c}
+.ew-ai-card{border-radius:16px;background:linear-gradient(120deg,rgba(14,48,59,.94),rgba(9,25,41,.97));border-color:rgba(112,226,208,.24)}
+.ew-forecast-card{border-radius:15px;background:linear-gradient(145deg,rgba(17,42,60,.96),rgba(8,23,38,.98));border-color:rgba(151,190,214,.15)}
+@media(max-width:900px){[data-testid="stSidebar"]{min-width:260px!important;max-width:260px!important}.ew-hero{padding:26px 22px}}
+@media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-top{gap:8px}.ew-live{font-size:.62rem}.stTabs [data-baseweb="tab"]{padding:0 9px;font-size:.76rem}}
+
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
@@ -239,7 +290,7 @@ footer{visibility:hidden}
 st.markdown("""
 <div class="ew-top">
   <div class="ew-brand">EARTHWISE <span>AI</span> <span style="color:#7892a8;font-weight:500">| PAKISTAN WEATHER & CLIMATE</span></div>
-  <div class="ew-live"><i></i> WEATHER DATA SERVICES</div>
+  <div class="ew-live"><i></i> EARTH INTELLIGENCE WORKSPACE</div>
 </div>
 <section class="ew-hero">
   <div class="ew-eyebrow">PAKISTAN WEATHER & EARTH INTELLIGENCE</div>
