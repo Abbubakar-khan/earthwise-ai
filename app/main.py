@@ -16,6 +16,7 @@ from src.nasa_power import fetch_daily, save_city_data
 from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
+from src.anomalies import seasonal_anomalies
 from src.live_weather import get_current_conditions, get_weather_forecast, get_national_weather_snapshot, commercial_api_configured, WEATHER_CODES
 
 
@@ -102,8 +103,8 @@ html,body,#globe{width:100%;height:100%;margin:0;padding:0;background:#06111d;ov
     components.html(html, height=550, scrolling=False)
 
 
-def render_nasa_satellite_map(imagery_date):
-    """Show NASA GIBS daily satellite true-colour imagery with city overlays."""
+def render_nasa_satellite_map(imagery_date, layer_id, layer_name, attribution, opacity=0.82):
+    """Render a dated NASA GIBS raster layer with Pakistan city reference points."""
     points = [
         {"name": name, "lat": info["latitude"], "lng": info["longitude"],
          "province": info["province"]}
@@ -113,33 +114,44 @@ def render_nasa_satellite_map(imagery_date):
     html = """<!doctype html><html><head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-      <style>html,body,#map{height:100%;margin:0;background:#071522}
+      <style>
+      html,body,#map{height:100%;margin:0;background:#071522}
       .leaflet-container{font-family:Arial,sans-serif}
       .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1d2d;color:#eaf8ff}
-      .leaflet-control-attribution{font-size:10px}</style></head><body>
-      <div id="map"></div>
+      .leaflet-control-attribution{font-size:10px}
+      .map-stamp{position:absolute;z-index:500;top:12px;left:12px;padding:8px 11px;
+        color:#eaf8ff;background:rgba(5,16,29,.88);border:1px solid rgba(130,205,225,.25);
+        border-radius:8px;font:600 11px Arial,sans-serif;letter-spacing:.06em}
+      </style></head><body>
+      <div id="map"><div class="map-stamp" id="stamp"></div></div>
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <script>
       const points = __CITY_DATA__;
+      const layerId = __LAYER_ID__;
+      const layerName = __LAYER_NAME__;
+      const attribution = __ATTRIBUTION__;
+      const mapDate = '__DATE__';
+      const opacity = __OPACITY__;
+      document.getElementById('stamp').textContent = layerName + ' / ' + mapDate;
       const map = L.map('map',{zoomControl:true,worldCopyJump:true}).setView([29.5,69.5],5);
-      L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/__DATE__/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg',{
-        maxZoom:9,
-        attribution:'Imagery: NASA/GSFC/ESDIS GIBS · VIIRS SNPP Corrected Reflectance True Color'
-      }).addTo(map);
+      const tileUrl = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/' +
+        layerId + '/default/' + mapDate + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg';
+      L.tileLayer(tileUrl,{maxZoom:9,opacity:opacity,crossOrigin:true,
+        attribution:attribution + ' · NASA GIBS'}).addTo(map);
       const pins = L.featureGroup();
-      points.forEach(p => {
-        L.circleMarker([p.lat,p.lng],{radius:5,color:'#b7f6ff',weight:1,fillColor:'#35cce8',fillOpacity:.9})
-          .bindPopup('<b>'+p.name+'</b><br>'+p.province)
-          .addTo(pins);
-      });
+      points.forEach(p => L.circleMarker([p.lat,p.lng],{
+        radius:5,color:'#b7f6ff',weight:1,fillColor:'#35cce8',fillOpacity:.9
+      }).bindPopup('<b>'+p.name+'</b><br>'+p.province).addTo(pins));
       pins.addTo(map);
       L.control.scale({imperial:false}).addTo(map);
       </script></body></html>"""
-    components.html(
-        html.replace("__CITY_DATA__", city_data).replace("__DATE__", imagery_date.isoformat()),
-        height=570, scrolling=False
-    )
-
+    html = (html.replace("__CITY_DATA__", city_data)
+                .replace("__LAYER_ID__", json.dumps(layer_id))
+                .replace("__LAYER_NAME__", json.dumps(layer_name))
+                .replace("__ATTRIBUTION__", json.dumps(attribution))
+                .replace("__DATE__", imagery_date.isoformat())
+                .replace("__OPACITY__", str(float(opacity))))
+    components.html(html, height=590, scrolling=False)
 
 
 @st.cache_data(ttl=24 * 60 * 60, show_spinner=False)
@@ -230,10 +242,10 @@ st.markdown("""
 </div>
 <section class="ew-hero">
   <div class="ew-eyebrow">PAKISTAN WEATHER & EARTH INTELLIGENCE</div>
-  <div class="ew-title">Weather updates.<br>Climate insight for Pakistan.</div>
-  <div class="ew-sub">Explore current model-based weather conditions, NASA satellite imagery, and historical climate indicators for cities across Pakistan — in one clear national dashboard.</div>
+  <div class="ew-title">From Earth observation<br>to climate decisions.</div>
+  <div class="ew-sub">A Pakistan-focused research workspace connecting NASA Earth observations, meteorological model data and reproducible climate analysis — with transparent sources, timestamps and scientific limitations.</div>
   <div class="ew-hero-foot">
-    <span class="ew-chip">CURRENT CONDITIONS</span><span class="ew-chip">NASA SATELLITE IMAGERY</span><span class="ew-chip">HISTORICAL CLIMATE ANALYSIS</span>
+    <span class="ew-chip">NASA EARTH OBSERVATIONS</span><span class="ew-chip">RAINFALL & HEAT SIGNALS</span><span class="ew-chip">REPRODUCIBLE CLIMATE ANALYSIS</span>
   </div>
 </section>
 """, unsafe_allow_html=True)
@@ -404,14 +416,14 @@ except Exception as exc:
 if not commercial_api_configured():
     st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_allow_html=True)
-weather_map_tab, globe_tab, satellite_tab, cities_tab = st.tabs(["🌦️  Pakistan weather map", "🌐  Earth view", "🛰️  Satellite imagery", "📍  City directory"])
+weather_map_tab, globe_tab, satellite_tab, cities_tab = st.tabs(["🌡️  National conditions", "🌐  Earth view", "🛰️  Satellite evidence", "📍  City directory"])
 with weather_map_tab:
     st.caption("Model-based current weather across the mapped Pakistan city directory · Select a layer to recolour the map")
     map_control, map_refresh = st.columns([3, 1])
     with map_control:
         map_layer = st.selectbox(
             "Weather layer",
-            ["Temperature", "Precipitation", "Humidity", "Wind speed"],
+            ["Temperature", "Apparent temperature", "Precipitation", "Humidity", "Wind speed"],
             key="national_weather_layer"
         )
     with map_refresh:
@@ -432,6 +444,7 @@ with weather_map_tab:
         )
         layer_columns = {
             "Temperature": ("temperature", "Temperature (°C)"),
+            "Apparent temperature": ("apparent_temperature", "Apparent temperature (°C)"),
             "Precipitation": ("precipitation", "Current precipitation (mm)"),
             "Humidity": ("humidity", "Relative humidity (%)"),
             "Wind speed": ("wind_speed", "Wind speed (km/h)"),
@@ -488,11 +501,19 @@ with weather_map_tab:
             f"Provider: {national_df['provider_time'].dropna().iloc[0] if national_df['provider_time'].notna().any() else 'time unavailable'} · "
             "Model-derived estimates, not weather-station observations."
         )
-        display_cols = ["city", "condition", "temperature", "humidity", "precipitation", "wind_speed"]
+        heat_screen = national_df.dropna(subset=["apparent_temperature"]).sort_values("apparent_temperature", ascending=False).head(10)
+        st.markdown("**Highest modelled apparent temperatures · screening, not an official heat alert**")
+        if not heat_screen.empty:
+            st.dataframe(heat_screen[["city", "province", "temperature", "apparent_temperature", "humidity"]].rename(columns={
+                "city": "City", "province": "Region", "temperature": "Air °C",
+                "apparent_temperature": "Apparent °C", "humidity": "Humidity %"
+            }).round(1), use_container_width=True, hide_index=True)
+        st.caption("Relative prioritisation only: apparent temperature is model-derived and is not a validated health-risk classification or substitute for PMD/health-authority warnings.")
+        display_cols = ["city", "condition", "temperature", "apparent_temperature", "humidity", "precipitation", "wind_speed"]
         st.dataframe(
             national_df[display_cols].rename(columns={
                 "city": "City", "condition": "Conditions",
-                "temperature": "Temperature °C", "humidity": "Humidity %",
+                "temperature": "Temperature °C", "apparent_temperature": "Apparent °C", "humidity": "Humidity %",
                 "precipitation": "Precipitation mm", "wind_speed": "Wind km/h"
             }),
             use_container_width=True, hide_index=True
@@ -511,16 +532,35 @@ with globe_tab:
     render_earth_globe(city)
     st.caption("Earth texture is a visual basemap. City markers use approximate city-centre coordinates; this is not a live satellite video feed.")
 with satellite_tab:
+    sat_col, opacity_col = st.columns([2, 1])
+    with sat_col:
+        evidence_layer = st.selectbox(
+            "Earth-observation layer",
+            ["VIIRS true-colour imagery", "GPM IMERG precipitation"],
+            key="earth_observation_layer"
+        )
+    with opacity_col:
+        raster_opacity = st.slider("Raster opacity", 0.25, 1.0, 0.82, 0.05, key="raster_opacity")
     imagery_date = st.date_input(
-        "Satellite imagery date",
+        "Observation date",
         value=date.today() - timedelta(days=2),
         min_value=date(2012, 1, 1),
-        max_value=date.today(),
-        help="NASA VIIRS imagery is a daily satellite composite. The newest date may not yet be processed."
+        max_value=date.today() - timedelta(days=1),
+        help="Select a completed UTC day. Recent NASA imagery may not yet have been processed."
     )
-    st.caption("NASA GIBS · VIIRS Suomi-NPP corrected reflectance true-colour imagery · Daily composite, not live video")
-    render_nasa_satellite_map(imagery_date)
-    st.caption("Imagery can be affected by cloud cover, acquisition gaps, and processing delay. Source: NASA GIBS.")
+    if evidence_layer == "GPM IMERG precipitation":
+        layer_id = "IMERG_Precipitation_Rate_30min"
+        layer_name = "GPM IMERG precipitation rate"
+        attribution = "NASA GPM IMERG · NASA/GSFC"
+        st.caption("NASA GPM IMERG satellite-derived precipitation visualisation. This is a raster evidence layer, not a gauge measurement or a flood forecast. Availability and latency vary by date.")
+        st.markdown("[NASA IMERG product documentation](https://gpm.nasa.gov/data/imerg) · [NASA GIBS layer access](https://nasa-gibs.github.io/gibs-api-docs/access-basics/)")
+    else:
+        layer_id = "VIIRS_SNPP_CorrectedReflectance_TrueColor"
+        layer_name = "VIIRS corrected reflectance true colour"
+        attribution = "NASA/GSFC/ESDIS VIIRS Suomi-NPP"
+        st.caption("NASA VIIRS Suomi-NPP corrected-reflectance true-colour daily composite. Cloud cover and acquisition gaps can obscure the surface.")
+    render_nasa_satellite_map(imagery_date, layer_id, layer_name, attribution, raster_opacity)
+    st.caption("Map tiles are served by NASA Global Imagery Browse Services (GIBS). The selected date is the imagery date, not necessarily the acquisition time of every pixel.")
 with cities_tab:
     map_df = pd.DataFrame([{"City": name, "Province": info["province"], "Latitude": info["latitude"], "Longitude": info["longitude"], "Selected": "Selected location" if name == city else "Other city"} for name, info in REGIONS.items()])
     map_fig = px.scatter_geo(map_df, lat="Latitude", lon="Longitude", color="Selected", hover_name="City",
@@ -575,6 +615,52 @@ with tab_overview:
         xaxis=dict(showgrid=False,zeroline=False,title=None),yaxis=dict(gridcolor="rgba(145,180,205,.12)",zeroline=False,title=analysis_unit))
     st.plotly_chart(fig,use_container_width=True,config={"displaylogo":False,"responsive":True})
     st.caption("Monthly precipitation is summed; other indicators are monthly means.")
+
+    st.markdown('<div class="ew-section">Seasonal anomaly lens</div>', unsafe_allow_html=True)
+    anomaly_df = seasonal_anomalies(monthly, variable)
+    if not anomaly_df.empty:
+        baseline_start = int(pd.to_datetime(anomaly_df["date"]).dt.year.min())
+        baseline_end = int(pd.to_datetime(anomaly_df["date"]).dt.year.max())
+        recent_anomaly = anomaly_df.dropna(subset=["anomaly"]).tail(1)
+        if not recent_anomaly.empty:
+            latest_value = float(recent_anomaly.iloc[0]["anomaly"])
+            st.metric(
+                "Latest monthly departure from seasonal mean",
+                f"{latest_value:+.2f} {analysis_unit}",
+                help=f"Compared with the mean for the same calendar month across the selected dataset ({baseline_start}–{baseline_end})."
+            )
+        anomaly_view = anomaly_df.tail(60)
+        anomaly_fig = px.bar(
+            anomaly_view, x="date", y="anomaly", color="anomaly",
+            color_continuous_scale="RdBu_r", color_continuous_midpoint=0,
+            labels={"date":"Month", "anomaly":f"Departure ({analysis_unit})"},
+            title="Monthly departure from same-month climatology"
+        )
+        anomaly_fig.add_hline(y=0, line_dash="dot", line_color="#9bb5c9", opacity=.7)
+        anomaly_fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(7,20,34,.35)",
+            font=dict(family="DM Sans", color="#b7cbd9"),
+            margin=dict(l=5,r=10,t=45,b=5), height=320,
+            coloraxis_showscale=False, showlegend=False,
+            xaxis=dict(showgrid=False, title=None),
+            yaxis=dict(gridcolor="rgba(145,180,205,.12)", title=analysis_unit)
+        )
+        st.plotly_chart(anomaly_fig, use_container_width=True,
+                        config={"displaylogo":False,"responsive":True})
+        st.caption(
+            f"Baseline: each calendar month's mean across this selected dataset ({baseline_start}–{baseline_end}). "
+            "This is a within-period seasonal departure, not a WMO 1991–2020 climate normal or an official anomaly product."
+        )
+        with st.expander("Inspect monthly anomaly values"):
+            st.dataframe(anomaly_df.tail(36).round(3), use_container_width=True, hide_index=True)
+            st.download_button(
+                "↓ Download seasonal anomaly series (CSV)",
+                anomaly_df.to_csv(index=False),
+                f"{city.lower().replace(' ','_')}_{variable.lower()}_seasonal_anomalies.csv",
+                "text/csv", use_container_width=True
+            )
+    else:
+        st.info("Not enough monthly observations to calculate a seasonal baseline.")
 with tab_trends:
     st.markdown('<div class="ew-section">Statistical trend assessment</div>', unsafe_allow_html=True)
     if result.get("status") == "ok":
