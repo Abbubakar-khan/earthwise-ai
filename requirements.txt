@@ -1,5 +1,12 @@
 # Deployment runtime is pinned to Python 3.12 in runtime.txt.
-streamlit==1.66.0
+# Streamlit pinned to 1.63.0 (not latest): 1.64.0+ frontend JS uses
+# Array.prototype.toSorted (ES2023, Chrome 110+), which throws
+# "Object.keys(...).toSorted is not a function" on older browsers.
+# 1.63.0's bundled frontend has zero toSorted/toReversed calls
+# (verified by grepping every 1.25-1.66 wheel), so the app loads
+# cleanly on old Chrome too — and new browsers run older Streamlit
+# code fine, so nothing is lost for modern visitors.
+streamlit==1.63.0
 pandas>=2.3.3,<4
 numpy>=2.3,<2.7
 requests>=2.32,<3
