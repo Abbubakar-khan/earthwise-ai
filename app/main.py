@@ -16,7 +16,7 @@ from src.nasa_power import fetch_daily, save_city_data
 from src.cleaning import monthly_aggregate, coverage_summary
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
-from src.live_weather import get_current_conditions, commercial_api_configured
+from src.live_weather import get_current_conditions, get_weather_forecast, commercial_api_configured, WEATHER_CODES
 
 
 def render_earth_globe(selected_city):
@@ -77,6 +77,11 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{background:#064b88;b
 .ew-founder{color:#71869a;font-size:.68rem;letter-spacing:.04em;text-align:center;padding:14px 0 4px}
 .ew-founder strong{color:#244f73;font-weight:700}
 [data-testid="stDataFrame"]{border:1px solid #dce6ef;border-radius:8px}
+.ew-forecast-card{height:100%;min-height:172px;border:1px solid rgba(102,227,242,.2);border-radius:14px;background:linear-gradient(145deg,rgba(14,34,52,.94),rgba(8,22,37,.96));padding:14px 13px;margin-bottom:10px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.ew-forecast-day{font-size:.72rem;color:#9bb9cc;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.ew-forecast-condition{font-size:.82rem;color:#d9edf7;margin:12px 0 8px;min-height:34px}
+.ew-forecast-temp{font:700 1.55rem 'Space Grotesk';color:#f4fbff}.ew-forecast-temp span{font-size:1rem;color:#91aabd;font-weight:500}
+.ew-forecast-detail{font-size:.68rem;color:#91aabd;margin-top:6px}.ew-forecast-detail b{color:#d8edf8;font-weight:600}
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.05rem}.ew-hero{padding:22px 18px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
@@ -281,7 +286,7 @@ with st.sidebar:
     st.markdown("### Time range")
     current_year = date.today().year
     start_year = st.number_input("Start year", min_value=1981, max_value=current_year, value=2001)
-    end_year = st.number_input("End year", min_value=int(start_year), max_value=current_year, value=min(current_year - 1, 2025))
+    end_year = st.number_input("End year", min_value=int(start_year), max_value=current_year, value=max(int(start_year), min(current_year - 1, 2025)))
     fetch = st.button("↗  Retrieve climate data", type="primary", use_container_width=True)
     st.divider()
     st.caption("SOURCE  /  NASA POWER Daily Point API")
@@ -315,6 +320,99 @@ if df is None:
         if variable in cached.columns:
             df = cached
 
+st.markdown('<div class="ew-section">Current conditions</div>', unsafe_allow_html=True)
+st.caption(f"{city} · Model-based latest conditions · Cached for 15 minutes · Not a station observation")
+refresh_col, _ = st.columns([1, 3])
+with refresh_col:
+    refresh_weather = st.button("↻  Refresh weather data", use_container_width=True)
+if refresh_weather:
+    get_current_conditions.clear()
+    get_weather_forecast.clear()
+try:
+    weather = get_current_conditions(
+        REGIONS[city]["latitude"], REGIONS[city]["longitude"], city
+    )
+    wx1, wx2, wx3, wx4 = st.columns(4)
+    feels_like = weather.get("apparent_temperature")
+    feels_label = f"Feels like {feels_like:.1f} °C" if isinstance(feels_like, (int, float)) else None
+    wx1.metric("Air temperature", f"{weather['temperature_2m']:.1f} °C" if isinstance(weather.get("temperature_2m"), (int, float)) else "—", feels_label)
+    wx2.metric("Humidity", f"{weather['relative_humidity_2m']:.0f}%" if isinstance(weather.get("relative_humidity_2m"), (int, float)) else "—")
+    wx3.metric("Wind speed", f"{weather['wind_speed_10m']:.1f} km/h" if isinstance(weather.get("wind_speed_10m"), (int, float)) else "—")
+    wx4.metric("Precipitation", f"{weather['precipitation']:.1f} mm" if isinstance(weather.get("precipitation"), (int, float)) else "—")
+    st.caption(
+        f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover') if weather.get('cloud_cover') is not None else '—'}% · "
+        f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
+        f"Source: {weather['source']} · [Open-Meteo](https://open-meteo.com/)"
+    )
+except Exception as exc:
+    st.warning(f"Current conditions are temporarily unavailable: {exc}")
+
+if not commercial_api_configured():
+    st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
+
+
+st.markdown('<div class="ew-section">7-day forecast</div>', unsafe_allow_html=True)
+st.caption("Model forecast for planning · Not an official PMD warning or emergency alert")
+try:
+    forecast = get_weather_forecast(
+        REGIONS[city]["latitude"], REGIONS[city]["longitude"]
+    )
+    daily = forecast["daily"]
+    day_count = min(7, len(daily.get("time", [])))
+    for offset in range(0, day_count, 4):
+        day_cols = st.columns(min(4, day_count - offset))
+        for col, i in zip(day_cols, range(offset, min(offset + 4, day_count))):
+            code = daily.get("weather_code", [None] * day_count)[i]
+            condition = WEATHER_CODES.get(code, "Conditions unavailable")
+            day_label = pd.to_datetime(daily["time"][i]).strftime("%a, %d %b")
+            high = daily.get("temperature_2m_max", [None] * day_count)[i]
+            low = daily.get("temperature_2m_min", [None] * day_count)[i]
+            rain = daily.get("precipitation_probability_max", [None] * day_count)[i]
+            rain_mm = daily.get("precipitation_sum", [None] * day_count)[i]
+            wind = daily.get("wind_speed_10m_max", [None] * day_count)[i]
+            with col:
+                if all(isinstance(v, (int, float)) for v in (high, low, rain, rain_mm, wind)):
+                    st.markdown(
+                        f'<div class="ew-forecast-card"><div class="ew-forecast-day">{day_label}</div>'
+                        f'<div class="ew-forecast-condition">{condition}</div>'
+                        f'<div class="ew-forecast-temp">{high:.0f}° <span>/ {low:.0f}°</span></div>'
+                        f'<div class="ew-forecast-detail">Rain chance <b>{rain:.0f}%</b></div>'
+                        f'<div class="ew-forecast-detail">Rainfall <b>{rain_mm:.1f} mm</b></div>'
+                        f'<div class="ew-forecast-detail">Max wind <b>{wind:.0f} km/h</b></div></div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.info(f"{day_label}: forecast details unavailable")
+    hourly = forecast["hourly"]
+    hourly_df = pd.DataFrame({
+        "Time": pd.to_datetime(hourly["time"]),
+        "Temperature (°C)": hourly["temperature_2m"],
+    }).dropna()
+    hourly_fig = px.line(hourly_df, x="Time", y="Temperature (°C)",
+                         labels={"Time": "Local time", "Temperature (°C)": "Temperature"})
+    hourly_fig.update_traces(line=dict(color="#66e3f2", width=2.7),
+                             hovertemplate="%{x|%a %H:%M}<br>%{y:.1f} °C<extra></extra>")
+    hourly_fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(7,20,34,.35)",
+        font=dict(family="DM Sans", color="#b7cbd9"),
+        margin=dict(l=5, r=10, t=15, b=5), height=280,
+        xaxis=dict(showgrid=False, title=None),
+        yaxis=dict(gridcolor="rgba(145,180,205,.12)", title="°C"),
+        hovermode="x unified"
+    )
+    st.markdown("**Next 24 hours · Temperature outlook**")
+    st.plotly_chart(hourly_fig, use_container_width=True,
+                    config={"displayModeBar": False, "responsive": True})
+    st.caption(
+        f"Forecast provider: {forecast['source']} · Model issue time: "
+        f"{forecast['forecast_generated_at']} ({forecast['timezone']}) · "
+        "Forecasts can change as new model runs arrive."
+    )
+except Exception as exc:
+    st.warning(f"Forecast is temporarily unavailable: {exc}")
+
+if not commercial_api_configured():
+    st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 st.markdown('<div class="ew-section">Earth observation workspace</div>', unsafe_allow_html=True)
 globe_tab, satellite_tab, cities_tab = st.tabs(["🌐  Earth view", "🛰️  Satellite imagery", "📍  City directory"])
 with globe_tab:
@@ -348,34 +446,6 @@ with cities_tab:
     st.plotly_chart(map_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
     st.caption(f"Directory: {len(REGIONS)} mapped urban centres across Pakistan. Coordinates are approximate city-centre points.")
 
-st.markdown('<div class="ew-section">Current conditions</div>', unsafe_allow_html=True)
-st.caption(f"{city} · Model-based latest conditions · Cached for 15 minutes · Not a station observation")
-refresh_col, _ = st.columns([1, 3])
-with refresh_col:
-    refresh_weather = st.button("↻  Refresh conditions", use_container_width=True)
-if refresh_weather:
-    get_current_conditions.clear()
-try:
-    weather = get_current_conditions(
-        REGIONS[city]["latitude"], REGIONS[city]["longitude"], city
-    )
-    wx1, wx2, wx3, wx4 = st.columns(4)
-    feels_like = weather.get("apparent_temperature")
-    feels_label = f"Feels like {feels_like:.1f} °C" if isinstance(feels_like, (int, float)) else None
-    wx1.metric("Air temperature", f"{weather['temperature_2m']:.1f} °C", feels_label)
-    wx2.metric("Humidity", f"{weather['relative_humidity_2m']:.0f}%")
-    wx3.metric("Wind speed", f"{weather['wind_speed_10m']:.1f} km/h")
-    wx4.metric("Precipitation", f"{weather['precipitation']:.1f} mm")
-    st.caption(
-        f"{weather['condition_text']} · Cloud cover {weather.get('cloud_cover') if weather.get('cloud_cover') is not None else '—'}% · "
-        f"Provider timestamp: {weather['provider_time']} ({weather['timezone']}) · "
-        f"Source: {weather['source']} · [Open-Meteo](https://open-meteo.com/)"
-    )
-except Exception as exc:
-    st.warning(f"Current conditions are temporarily unavailable: {exc}")
-
-if not commercial_api_configured():
-    st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
 
 if df is None:
     st.markdown('<div class="ew-section">Your climate workspace</div>', unsafe_allow_html=True)
