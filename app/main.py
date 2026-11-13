@@ -388,7 +388,7 @@ try:
     st.plotly_chart(hourly_fig, use_container_width=True,
                     config={"displayModeBar": False, "responsive": True})
     st.caption(
-        f"Forecast provider: {forecast['source']} · Model issue time: "
+        f"Forecast provider: {forecast['source']} · Forecast data timestamp: "
         f"{forecast['forecast_generated_at']} ({forecast['timezone']}) · "
         "Forecasts can change as new model runs arrive."
     )
@@ -405,7 +405,7 @@ with weather_map_tab:
     with map_control:
         map_layer = st.selectbox(
             "Weather layer",
-            ["Temperature", "Rainfall", "Humidity", "Wind speed"],
+            ["Temperature", "Precipitation", "Humidity", "Wind speed"],
             key="national_weather_layer"
         )
     with map_refresh:
@@ -426,7 +426,7 @@ with weather_map_tab:
         )
         layer_columns = {
             "Temperature": ("temperature", "Temperature (°C)"),
-            "Rainfall": ("precipitation", "Precipitation (mm)"),
+            "Precipitation": ("precipitation", "Current precipitation (mm)"),
             "Humidity": ("humidity", "Relative humidity (%)"),
             "Wind speed": ("wind_speed", "Wind speed (km/h)"),
         }
