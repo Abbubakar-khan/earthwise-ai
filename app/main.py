@@ -211,6 +211,12 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 .ew-ai-description{color:#9eb8ca;font-size:.8rem;line-height:1.6}
 .ew-founder{color:#718da3;font-size:.68rem;letter-spacing:.07em;text-align:center;padding:14px 0 4px}
 .ew-founder strong{color:#a9c5d7;font-weight:600}
+.ew-forecast-card{height:100%;min-height:190px;border:1px solid rgba(102,227,242,.2);border-radius:14px;background:linear-gradient(145deg,rgba(14,34,52,.94),rgba(8,22,37,.96));padding:14px 13px;margin-bottom:10px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.ew-forecast-day{font-size:.72rem;color:#9bb9cc;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.ew-forecast-condition{font-size:.82rem;color:#d9edf7;margin:12px 0 8px;min-height:34px;display:flex;align-items:center}
+.ew-forecast-temp{font:700 1.55rem 'Space Grotesk';color:#f4fbff}.ew-forecast-temp span{font-size:1rem;color:#91aabd;font-weight:500}
+.ew-forecast-detail{font-size:.68rem;color:#91aabd;margin-top:6px;line-height:1.4}.ew-forecast-detail b{color:#d8edf8;font-weight:600}
+div[data-testid="stLinkButton"] a{border-radius:10px;border:1px solid rgba(102,227,242,.34);background:linear-gradient(105deg,#126d89,#245ba8);color:#fff;font-weight:700;min-height:2.65rem}
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
