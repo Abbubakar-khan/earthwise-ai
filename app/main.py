@@ -19,6 +19,33 @@ from src.ai_engine import explain_result
 from src.live_weather import get_current_conditions, get_weather_forecast, commercial_api_configured, WEATHER_CODES
 
 
+def weather_symbol(code):
+    """Return a compact visual symbol for a WMO weather code."""
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "🌤️"
+    if code == 0:
+        return "☀️"
+    if code in (1, 2):
+        return "🌤️"
+    if code == 3:
+        return "☁️"
+    if code in (45, 48):
+        return "🌫️"
+    if 51 <= code <= 67:
+        return "🌧️"
+    if 71 <= code <= 77:
+        return "❄️"
+    if 80 <= code <= 82:
+        return "🌦️"
+    if 85 <= code <= 86:
+        return "🌨️"
+    if 95 <= code <= 99:
+        return "⛈️"
+    return "🌤️"
+
+
 def render_earth_globe(selected_city):
     """Render an interactive textured 3D Earth with mapped Pakistan city markers."""
     points = [
@@ -31,60 +58,9 @@ def render_earth_globe(selected_city):
     html = """<!doctype html><html><head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap');
-:root{--navy:#092b52;--blue:#075da8;--sky:#eaf4fc;--line:#d7e3ef;--ink:#17324d;--muted:#637b91}
-html,body,[class*="css"]{font-family:'Inter',sans-serif}
-.stApp{background:#f3f7fb;color:var(--ink)}
-[data-testid="stHeader"]{background:rgba(243,247,251,.94);backdrop-filter:blur(12px)}
-[data-testid="stSidebar"]{background:#fff;border-right:1px solid #dce6f0}
-[data-testid="stSidebar"] *{color:#183b5d}
-.block-container{max-width:1480px;padding-top:1.15rem;padding-bottom:3rem}
-h1,h2,h3,h4{font-family:'Manrope',sans-serif!important;color:#12395f;letter-spacing:-.025em}
-.ew-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding:13px 18px;background:#fff;border:1px solid #dce6ef;border-radius:12px;box-shadow:0 3px 14px rgba(15,55,90,.045)}
-.ew-brand{font:800 .92rem 'Manrope';letter-spacing:.08em;color:#0b3763}
-.ew-brand span{color:#0782c9}
-.ew-live{display:inline-flex;align-items:center;gap:8px;border:1px solid #cce7dc;background:#effaf4;border-radius:6px;padding:7px 11px;color:#16744b;font-size:.68rem;letter-spacing:.07em;font-weight:700}
-.ew-live i{width:7px;height:7px;background:#20a36b;border-radius:50%}
-.ew-hero{position:relative;overflow:hidden;border:0;border-radius:12px;padding:clamp(25px,4vw,42px);background:linear-gradient(112deg,#073568 0%,#075da8 58%,#1687c6 100%);margin-bottom:18px;box-shadow:0 9px 24px rgba(9,57,100,.13)}
-.ew-hero:before{content:'';position:absolute;right:-90px;top:-180px;width:430px;height:430px;border:1px solid rgba(255,255,255,.19);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.045),0 0 0 58px rgba(255,255,255,.035);pointer-events:none}
-.ew-eyebrow{position:relative;color:#bce8ff;font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-.ew-title{position:relative;font:800 clamp(2rem,4.5vw,3.45rem)/1.06 'Manrope';letter-spacing:-.055em;color:#fff;margin:12px 0;max-width:800px}
-.ew-sub{position:relative;color:#e0f1ff;max-width:780px;line-height:1.65;font-size:.96rem}
-.ew-hero-foot{position:relative;display:flex;gap:8px;flex-wrap:wrap;margin-top:19px}
-.ew-chip{border:1px solid rgba(255,255,255,.27);background:rgba(255,255,255,.1);padding:7px 10px;border-radius:5px;color:#fff;font-size:.67rem;letter-spacing:.045em;font-weight:600}
-.ew-section{font:800 1.13rem 'Manrope';color:#12395f;margin:1.3rem 0 .65rem;padding-left:11px;border-left:4px solid #1685c5}
-.ew-muted{color:#637b91;font-size:.8rem}
-.ew-panel{border:1px solid #dbe6ef;border-radius:10px;background:#fff;padding:17px 18px;box-shadow:0 3px 12px rgba(18,57,95,.035)}
-.ew-panel-label{color:#627d94;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
-.ew-panel-value{font:800 1.35rem 'Manrope';color:#124c7d;margin-top:8px}
-.ew-panel-note{color:#6b8195;font-size:.74rem;margin-top:4px}
-div[data-testid="stMetric"]{background:#fff;border:1px solid #dce6ef;border-radius:10px;padding:13px 15px;box-shadow:0 3px 12px rgba(18,57,95,.035)}
-div[data-testid="stMetricLabel"]{color:#627b91}
-div[data-testid="stMetricValue"]{color:#123f69;font-family:'Manrope',sans-serif;font-weight:800}
-div.stButton>button,div.stDownloadButton>button{border-radius:7px;border:1px solid #075da8;background:#075da8;color:#fff;font-weight:700;min-height:2.65rem;transition:all .18s ease}
-div.stButton>button:hover,div.stDownloadButton>button:hover{background:#064b88;border-color:#064b88;color:#fff;box-shadow:0 5px 14px rgba(7,93,168,.16)}
-.stSelectbox>div>div,.stNumberInput>div>div,.stTextInput>div>div{background:#fff;border-color:#cbd9e6;border-radius:7px}
-.stTabs [data-baseweb="tab-list"]{gap:4px;border-bottom:1px solid #d7e3ef;background:#e9f1f8;padding:5px;border-radius:8px}
-.stTabs [data-baseweb="tab"]{border-radius:6px 6px 0 0;color:#315979;padding:10px 15px;font-weight:700}
-.stTabs [aria-selected="true"]{color:#075da8!important;background:#fff!important}
-[data-testid="stExpander"]{border:1px solid #d7e3ef;border-radius:9px;background:#fff}
-.stAlert{border-radius:8px}
-.ew-ai-card{border:1px solid #cfe0ed;border-radius:10px;background:linear-gradient(110deg,#fff,#eff7fd);padding:19px 21px;box-shadow:0 4px 15px rgba(18,57,95,.05);position:relative;overflow:hidden}
-.ew-ai-card:before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:#0782c9}
-.ew-ai-kicker{color:#0873b3;font-size:.65rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
-.ew-ai-heading{font:800 1.2rem 'Manrope';color:#12395f;margin:7px 0 5px}
-.ew-ai-description{color:#58748d;font-size:.8rem;line-height:1.6}
-.ew-founder{color:#71869a;font-size:.68rem;letter-spacing:.04em;text-align:center;padding:14px 0 4px}
-.ew-founder strong{color:#244f73;font-weight:700}
-[data-testid="stDataFrame"]{border:1px solid #dce6ef;border-radius:8px}
-.ew-forecast-card{height:100%;min-height:172px;border:1px solid rgba(102,227,242,.2);border-radius:14px;background:linear-gradient(145deg,rgba(14,34,52,.94),rgba(8,22,37,.96));padding:14px 13px;margin-bottom:10px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
-.ew-forecast-day{font-size:.72rem;color:#9bb9cc;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.ew-forecast-condition{font-size:.82rem;color:#d9edf7;margin:12px 0 8px;min-height:34px}
-.ew-forecast-temp{font:700 1.55rem 'Space Grotesk';color:#f4fbff}.ew-forecast-temp span{font-size:1rem;color:#91aabd;font-weight:500}
-.ew-forecast-detail{font-size:.68rem;color:#91aabd;margin-top:6px}.ew-forecast-detail b{color:#d8edf8;font-weight:600}
-footer{visibility:hidden}
-@media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.05rem}.ew-hero{padding:22px 18px}.ew-top{align-items:flex-start;flex-direction:column}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+html,body,#globe{width:100%;height:100%;margin:0;padding:0;background:#06111d;overflow:hidden}
+#globe{position:relative}
+.hint{position:absolute;left:14px;bottom:10px;z-index:2;color:#a8c8d8;font:600 10px Arial,sans-serif;letter-spacing:.12em;background:rgba(5,17,29,.72);padding:7px 9px;border:1px solid rgba(125,205,225,.18);border-radius:6px;pointer-events:none}
 </style></head><body>
       <div id="globe"><div class="load" id="load">INITIALIZING EARTH VISUALIZATION…</div></div>
       <div class="hint">DRAG TO ROTATE · SCROLL TO ZOOM · HOVER OVER PINS</div>
@@ -347,9 +323,6 @@ try:
 except Exception as exc:
     st.warning(f"Current conditions are temporarily unavailable: {exc}")
 
-if not commercial_api_configured():
-    st.caption("Prototype mode: the free Open-Meteo endpoint is for non-commercial evaluation only. Configure OPEN_METEO_API_KEY with a commercial subscription before monetizing or operating this as a commercial service.")
-
 
 st.markdown('<div class="ew-section">7-day forecast</div>', unsafe_allow_html=True)
 st.caption("Model forecast for planning · Not an official PMD warning or emergency alert")
@@ -363,22 +336,28 @@ try:
         day_cols = st.columns(min(4, day_count - offset))
         for col, i in zip(day_cols, range(offset, min(offset + 4, day_count))):
             code = daily.get("weather_code", [None] * day_count)[i]
-            condition = WEATHER_CODES.get(code, "Conditions unavailable")
+            condition = WEATHER_CODES.get(int(code), "Conditions unavailable") if code is not None else "Conditions unavailable"
+            symbol = weather_symbol(code)
             day_label = pd.to_datetime(daily["time"][i]).strftime("%a, %d %b")
             high = daily.get("temperature_2m_max", [None] * day_count)[i]
             low = daily.get("temperature_2m_min", [None] * day_count)[i]
             rain = daily.get("precipitation_probability_max", [None] * day_count)[i]
             rain_mm = daily.get("precipitation_sum", [None] * day_count)[i]
             wind = daily.get("wind_speed_10m_max", [None] * day_count)[i]
+            uv = daily.get("uv_index_max", [None] * day_count)[i]
+            sunrise = daily.get("sunrise", [None] * day_count)[i]
+            sunset = daily.get("sunset", [None] * day_count)[i]
             with col:
-                if all(isinstance(v, (int, float)) for v in (high, low, rain, rain_mm, wind)):
+                if all(isinstance(v, (int, float)) for v in (high, low, rain, rain_mm, wind, uv)):
                     st.markdown(
                         f'<div class="ew-forecast-card"><div class="ew-forecast-day">{day_label}</div>'
-                        f'<div class="ew-forecast-condition">{condition}</div>'
+                        f'<div class="ew-forecast-condition"><span style="font-size:1.35rem;margin-right:7px">{symbol}</span>{condition}</div>'
                         f'<div class="ew-forecast-temp">{high:.0f}° <span>/ {low:.0f}°</span></div>'
                         f'<div class="ew-forecast-detail">Rain chance <b>{rain:.0f}%</b></div>'
                         f'<div class="ew-forecast-detail">Rainfall <b>{rain_mm:.1f} mm</b></div>'
-                        f'<div class="ew-forecast-detail">Max wind <b>{wind:.0f} km/h</b></div></div>',
+                        f'<div class="ew-forecast-detail">Max wind <b>{wind:.0f} km/h</b></div>'
+                        f'<div class="ew-forecast-detail">UV max <b>{uv:.1f}</b></div>'
+                        f'<div class="ew-forecast-detail">Sunrise <b>{pd.to_datetime(sunrise).strftime("%H:%M") if sunrise else "—"}</b> · Sunset <b>{pd.to_datetime(sunset).strftime("%H:%M") if sunset else "—"}</b></div></div>',
                         unsafe_allow_html=True
                     )
                 else:
