@@ -364,6 +364,14 @@ ai_context = build_ai_context(
     city, variable, start_year, end_year, weather, monthly, trend
 )
 
+# Keep the assistant transcript aligned with the evidence currently on screen.
+# A conversation started for another city/indicator/period must not silently
+# carry over into a new analytical context.
+ai_context_signature = (city, variable, int(start_year), int(end_year))
+if st.session_state.get("ai_context_signature") != ai_context_signature:
+    st.session_state.ai_messages = []
+    st.session_state.ai_context_signature = ai_context_signature
+
 # ---------------------------------------------------------------------
 # Shared header
 # ---------------------------------------------------------------------
@@ -634,6 +642,7 @@ elif page == "Data Library":
                 st.session_state.workspace_token = recovery_key.strip()
                 st.session_state.pop("pending_user_upload", None)
                 st.session_state.pop("saved_dataset_preview", None)
+                st.session_state.pop("selected_saved_dataset_id", None)
                 st.success("Workspace key accepted.")
                 st.rerun()
             else:
