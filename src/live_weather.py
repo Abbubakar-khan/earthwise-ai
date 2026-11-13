@@ -112,3 +112,52 @@ def get_weather_forecast(latitude: float, longitude: float) -> dict:
         "source": "Open-Meteo commercial API" if api_key else "Open-Meteo free evaluation API",
         "forecast_generated_at": payload.get("current", {}).get("time", "Unavailable"),
     }
+
+
+
+@st.cache_data(ttl=20 * 60, show_spinner=False)
+def get_national_weather_snapshot(region_records: tuple[tuple[str, float, float], ...]) -> list[dict]:
+    """Fetch one cached multi-location snapshot for the mapped Pakistan city directory."""
+    api_key = _get_api_key()
+    api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
+    records = []
+    for start in range(0, len(region_records), 40):
+        chunk = region_records[start:start + 40]
+        params = {
+            "latitude": ",".join(str(item[1]) for item in chunk),
+            "longitude": ",".join(str(item[2]) for item in chunk),
+            "current": "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
+            "timezone": "auto",
+            "temperature_unit": "celsius",
+            "wind_speed_unit": "kmh",
+            "precipitation_unit": "mm",
+        }
+        if api_key:
+            params["apikey"] = api_key
+        response = requests.get(api_url, params=params, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+        if isinstance(payload, dict):
+            payload = [payload]
+        if not isinstance(payload, list) or len(payload) != len(chunk):
+            raise ValueError("The weather provider returned an incomplete multi-city snapshot.")
+        for (city, latitude, longitude), item in zip(chunk, payload):
+            current = item.get("current", {}) if isinstance(item, dict) else {}
+            if not current:
+                continue
+            records.append({
+                "city": city,
+                "latitude": latitude,
+                "longitude": longitude,
+                "temperature": current.get("temperature_2m"),
+                "humidity": current.get("relative_humidity_2m"),
+                "precipitation": current.get("precipitation"),
+                "wind_speed": current.get("wind_speed_10m"),
+                "weather_code": current.get("weather_code"),
+                "condition": WEATHER_CODES.get(current.get("weather_code"), "Conditions unavailable"),
+                "provider_time": current.get("time"),
+                "timezone": item.get("timezone", "Local time"),
+            })
+    if not records:
+        raise ValueError("No city weather records were returned.")
+    return records
