@@ -288,6 +288,20 @@ with st.sidebar:
     st.caption("SOURCE  /  NASA POWER Daily Point API")
     st.caption("Historical gridded estimates · Not station observations")
     st.caption("Recent records may be incomplete.")
+    with st.expander("Data provenance & scientific limits"):
+        st.markdown(
+            "- **NASA POWER** — daily meteorological analysis-ready data. Meteorological fields are derived from NASA GMAO MERRA-2 / GEOS-IT products; they are gridded estimates, not local station observations. [API documentation](https://power.larc.nasa.gov/docs/services/api/temporal/daily/)"
+        )
+        st.markdown(
+            "- **NASA GPM IMERG** — satellite-based precipitation estimates at roughly 0.1° / 10 km and 30-minute intervals. Near-real-time Early products have about 4-hour minimum latency; the map is a NASA GIBS visualisation, not a gauge record or flood forecast. [Product documentation](https://gpm.nasa.gov/data/imerg)"
+        )
+        st.markdown(
+            "- **Open-Meteo** — current conditions and forecast values are weather-model products assembled from national forecasting models; current conditions are model-based, not direct observations. [API documentation](https://open-meteo.com/en/docs)"
+        )
+        st.markdown(
+            "- **Official warnings** — use Pakistan Meteorological Department for authoritative forecasts and alerts: [weather.gov.pk](https://weather.gov.pk/)."
+        )
+        st.caption("The free Open-Meteo API is intended for non-commercial use. A commercial deployment needs an appropriate commercial licence/API plan.")
 
 if fetch:
     coords = REGIONS[city]
