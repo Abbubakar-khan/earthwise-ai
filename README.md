@@ -11,8 +11,9 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
 - Province/region filtering, searchable city selection, an interactive Pakistan map, and a textured, rotatable 3D Earth globe with city markers.
 - NASA GIBS VIIRS Suomi-NPP corrected-reflectance true-colour daily satellite imagery, date-selectable and overlaid with Pakistan city markers.
-- Model-based current weather conditions from Open-Meteo (temperature, apparent temperature, humidity, wind, precipitation and cloud cover), refreshed on demand and cached for 15 minutes.
-- Refined English-language mission-control interface with responsive layout, subtle motion, hover states, animated status indicator, and reduced-motion accessibility.
+- Model-based current weather conditions from Open-Meteo (temperature, apparent temperature, humidity, wind, precipitation and cloud cover), cached for 15 minutes.
+- Seven-day daily model forecast and next-24-hour temperature outlook from Open-Meteo, cached for 30 minutes and refreshed with the weather refresh control.
+- Premium responsive weather-dashboard interface with ordered weather, forecast, Earth observation and climate-analysis sections, subtle motion, hover states, and reduced-motion accessibility.
 - Historical date-range selection and NASA POWER API retrieval.
 - Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
 - Downloadable monthly CSV and local raw-data/metadata files.
@@ -31,7 +32,7 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 
 ## Run locally
 
-Python 3.12–3.14 is supported by the current deployment dependency set. Streamlit Community Cloud currently defaults to Python 3.12; if creating a fresh deployment, select Python 3.12 in Advanced settings for the most conservative option.
+The deployment is pinned to Python 3.12 in `runtime.txt`. Use Python 3.12 locally for the closest match to the deployed environment.
 
 ```bash
 python -m venv .venv
@@ -56,7 +57,7 @@ py -m streamlit run app/main.py
 
 1. Sign in to Streamlit Community Cloud with the GitHub account that can access this repository.
 2. Create a new app and select repository `Abbubakar-khan/earthwise-ai`.
-3. Select branch `compat/streamlit-launch`.
+3. Select branch `main` (the maintained deployment branch).
 4. Set the main file path to `app/main.py`.
 5. Deploy. The first run installs the dependencies and may take several minutes.
 
