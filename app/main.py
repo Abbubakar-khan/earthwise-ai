@@ -124,6 +124,105 @@ def render_globe(selected_city: str):
     components.html(html, height=540, scrolling=False)
 
 
+
+def render_pakistan_map(selected_city: str):
+    """Google-Maps-style interactive map with province and division outlines."""
+    points = [
+        {"name": name, "lat": info["latitude"], "lng": info["longitude"],
+         "province": info["province"]}
+        for name, info in REGIONS.items()
+    ]
+    html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+      html,body,#map{height:100%;margin:0;background:#071522;color:#eaf8ff}
+      .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1d2d;color:#eaf8ff}
+      .leaflet-tooltip{background:#0b1d2d;border:1px solid #4c8198;color:#eaf8ff;box-shadow:none;font-weight:700}
+      .leaflet-control-layers{background:#0b1d2d;color:#eaf8ff;border:1px solid #34546b}
+      .leaflet-control-zoom a{background:#0b1d2d;color:#eaf8ff;border-color:#34546b}
+      .map-status{position:absolute;z-index:500;top:12px;left:50px;background:rgba(7,22,36,.92);color:#c9eaf4;padding:8px 12px;border:1px solid #31566e;border-radius:9px;font:12px Arial;max-width:72%}
+      #fallback{padding:24px;font:14px Arial,sans-serif}
+    </style></head><body>
+    <div id="map"><div id="fallback">Loading interactive Pakistan map…</div></div>
+    <div class="map-status" id="map-status">Province outlines · City locations · Zoom to explore</div>
+    <script>
+    const points=__POINTS__, selected=__SELECTED__, mapEl=document.getElementById('map');
+    const fail=(message)=>{mapEl.innerHTML='<div id="fallback">'+message+'</div>';};
+    const css=document.querySelector('link');css.onerror=()=>fail('Map styles could not load. Check your connection and retry.');
+    const js=document.createElement('script');js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.onerror=()=>fail('Interactive map could not load. Check your connection and retry.');
+    js.onload=async()=>{
+      try{
+        mapEl.innerHTML='';
+        const selectedPoint=points.find(p=>p.name===selected);
+        const map=L.map('map',{zoomControl:true,scrollWheelZoom:true}).setView(
+          selectedPoint?[selectedPoint.lat,selectedPoint.lng]:[29.5,69.5], selectedPoint?7:5
+        );
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+          maxZoom:18,attribution:'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+        const cityLayer=L.featureGroup();
+        points.forEach(p=>{
+          const chosen=p.name===selected;
+          const marker=L.circleMarker([p.lat,p.lng],{
+            radius:chosen?8:5,color:chosen?'#ffe08a':'#e8fbff',
+            weight:chosen?3:1.5,fillColor:chosen?'#ffb84d':'#16a9c9',fillOpacity:.95
+          }).bindPopup('<b>'+p.name+'</b><br>'+p.province+'<br><small>'+p.lat.toFixed(3)+', '+p.lng.toFixed(3)+'</small>');
+          marker.bindTooltip(p.name,{direction:'top',offset:[0,-7]});
+          marker.addTo(cityLayer);
+        });
+        cityLayer.addTo(map);
+        const overlays={'Mapped cities':cityLayer};
+        const layerControl=L.control.layers(null,overlays,{collapsed:true}).addTo(map);
+        const provinceUrl='https://raw.githubusercontent.com/PakData/GISData/master/PAK-GeoJSON/PAK_adm1.json';
+        const divisionUrl='https://raw.githubusercontent.com/PakData/GISData/master/PAK-GeoJSON/PAK_adm2.json';
+        const [provinceResponse,divisionResponse]=await Promise.all([fetch(provinceUrl),fetch(divisionUrl)]);
+        if(!provinceResponse.ok||!divisionResponse.ok) throw new Error('Boundary data unavailable');
+        const [provinceGeo,divisionGeo]=await Promise.all([provinceResponse.json(),divisionResponse.json()]);
+        const provinceLayer=L.geoJSON(provinceGeo,{
+          style:{color:'#6ce5ed',weight:2.5,opacity:.95,fillColor:'#2b9cb0',fillOpacity:.055},
+          onEachFeature:(feature,layer)=>{
+            const name=feature.properties.NAME_1||'Province / region';
+            layer.bindTooltip(name,{sticky:true,direction:'center'});
+            layer.bindPopup('<b>'+name+'</b><br>Pakistan administrative boundary');
+          }
+        }).addTo(map);
+        const divisionLayer=L.geoJSON(divisionGeo,{
+          style:{color:'#e8c879',weight:1.15,opacity:.78,fillOpacity:0},
+          onEachFeature:(feature,layer)=>{
+            const name=feature.properties.NAME_2||'Division';
+            const province=feature.properties.NAME_1||'';
+            layer.bindTooltip(name,{sticky:true,direction:'center'});
+            layer.bindPopup('<b>'+name+'</b><br>'+province+'<br><small>Administrative division boundary</small>');
+          }
+        });
+        overlays['Province / region boundaries']=provinceLayer;
+        overlays['Division boundaries']=divisionLayer;
+        layerControl.addOverlay(provinceLayer,'Province / region boundaries');
+        layerControl.addOverlay(divisionLayer,'Division boundaries');
+        map.on('zoomend',()=>{
+          if(map.getZoom()>=7){if(!map.hasLayer(divisionLayer))map.addLayer(divisionLayer);}
+          else if(map.hasLayer(divisionLayer))map.removeLayer(divisionLayer);
+        });
+        if(selectedPoint){
+          L.circle([selectedPoint.lat,selectedPoint.lng],{
+            radius:45000,color:'#ffcf70',weight:1,opacity:.8,fillOpacity:0,dashArray:'5 7'
+          }).addTo(map);
+        }
+        L.control.scale({imperial:false}).addTo(map);
+        document.getElementById('map-status').textContent=
+          'Selected: '+(selectedPoint?selectedPoint.name:'Pakistan')+' · Tap a province or city · Scroll / +/- to zoom';
+        setTimeout(()=>map.invalidateSize(),250);
+      }catch(e){document.getElementById('map-status').textContent='Boundary overlays unavailable — base map may still be used.';}
+    };
+    document.head.appendChild(js);
+    </script></body></html>"""
+    html = html.replace("__POINTS__", json.dumps(points)).replace(
+        "__SELECTED__", json.dumps(selected_city)
+    )
+    components.html(html, height=640, scrolling=False)
+
+
 def render_satellite_map(imagery_date):
     points = [
         {"name": name, "lat": info["latitude"], "lng": info["longitude"],
@@ -764,10 +863,14 @@ elif page == "AI Earth Scientist":
 # ---------------------------------------------------------------------
 elif page == "Earth Explorer":
     st.markdown('<div class="ew-section">Earth Explorer</div>', unsafe_allow_html=True)
-    view = st.radio("Explore", ["3D Earth", "NASA satellite imagery", "Pakistan city atlas"], horizontal=True)
+    view = st.radio("Explore", ["3D Earth", "Pakistan interactive map", "NASA satellite imagery", "Pakistan city atlas"], horizontal=True)
     if view == "3D Earth":
-        st.caption("Interactive textured Earth with mapped Pakistan urban centres. The texture is a visual basemap, not live satellite video.")
+        st.caption("Interactive 3D Earth with mapped Pakistan urban centres. Drag to rotate and scroll to zoom. The texture is a visual basemap, not live satellite video.")
         render_globe(city)
+    elif view == "Pakistan interactive map":
+        st.caption("Map-style navigation with zoom, searchable visual landmarks, province/region outlines and division boundaries. Choose a city in the sidebar to centre the map.")
+        render_pakistan_map(city)
+        st.caption("Map tiles © OpenStreetMap contributors. Administrative outlines: PakData GISData (GADM-derived). Boundaries are reference geography, not a legal cadastral survey.")
     elif view == "NASA satellite imagery":
         imagery_date = st.date_input(
             "Imagery date", value=date.today() - timedelta(days=3),
