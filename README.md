@@ -1,51 +1,78 @@
 # EARTHWISE AI — The Intelligent Earth Trend Observatory
-**FORGE CYBER LAB | Pakistan-first | NASA Space Apps 2026**
 
-EARTHWISE AI is a research prototype for exploring environmental time-series, estimating trends, comparing locations, and explaining computed results with transparent caveats.
+**FORGE CYBER LAB | Pakistan-first | Research prototype**
 
-## Important status
-This package is a **reproducible starter implementation**, not proof that all live data have already been downloaded or that every module has been independently validated against ground stations. The app fetches NASA POWER data at runtime. GPM IMERG and MODIS are documented as next-stage integrations; they are not falsely represented as already integrated.
+EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical daily point data from NASA POWER, aggregates the selected variable to monthly values, calculates a simple trend, and provides a cautious plain-language explanation.
 
-## Quick start (Android/mobile)
-You can inspect/edit files on mobile, but running Python + Streamlit locally is awkward. Use **GitHub Codespaces** or **Replit** in your mobile browser:
-1. Create a GitHub repository named `earthwise-ai`.
-2. Upload/extract this ZIP into the repository.
-3. Open the repo in Codespaces (or import into Replit).
-4. In the terminal run:
-   ```bash
-   pip install -r requirements.txt
-   streamlit run app/main.py --server.address 0.0.0.0
-   ```
-5. Open the forwarded Streamlit port (usually 8501).
-6. Select a city, fetch NASA POWER data, then run the trend analysis.
+## Current MVP features
 
-## Local setup
+- Searchable directory of 101 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
+- PBS 2023 Census reference: [National Census Report](https://www.pbs.gov.pk/sites/default/files/population/2023/reports/National%20Census%20Report-2023.pdf) and [Table 2 — Urban Localities](https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_2_national.pdf).
+- Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
+- Province/region filtering, searchable city selection, an interactive Pakistan map, and a textured, rotatable 3D Earth globe with city markers.
+- NASA GIBS VIIRS Suomi-NPP corrected-reflectance true-colour daily satellite imagery, date-selectable and overlaid with Pakistan city markers.
+- Model-based current weather conditions from Open-Meteo (temperature, apparent temperature, humidity, wind, precipitation and cloud cover), refreshed on demand and cached for 15 minutes.
+- Refined English-language mission-control interface with responsive layout, subtle motion, hover states, animated status indicator, and reduced-motion accessibility.
+- Historical date-range selection and NASA POWER API retrieval.
+- Monthly aggregation, data-coverage reporting, trend visualization, Kendall tau p-value and Sen's slope.
+- Downloadable monthly CSV and local raw-data/metadata files.
+
+## Important scientific limitations
+
+- NASA POWER point values are gridded satellite/model-assisted estimates, not measurements from a local weather station.
+- This MVP analyzes historical data. It is not a weather forecast, climate projection, or disaster prediction system.
+- Daily precipitation values are summed into monthly totals. Other supported daily variables are averaged into monthly means.
+- The simple Kendall trend test does not correct for monthly seasonality or serial autocorrelation. Interpret p-values cautiously.
+- The AI explanation is based on computed trend fields; it should not be treated as an independent scientific validation.
+- Data availability and completeness depend on NASA POWER. Recent dates may be incomplete.
+- Open-Meteo current conditions are model-based estimates, not guaranteed local weather-station observations or emergency-grade warnings. The provider timestamp and source are displayed in the app; requests are cached for 15 minutes. See [Open-Meteo documentation](https://open-meteo.com/en/docs).
+- The no-key Open-Meteo endpoint is only for non-commercial evaluation. Before commercial operation, configure the `OPEN_METEO_API_KEY` environment variable using a valid commercial subscription. See [Open-Meteo pricing and commercial terms](https://open-meteo.com/en/pricing). Weather data attribution is required under CC BY 4.0.
+- NASA GIBS VIIRS imagery is a satellite-derived daily composite, not live video. Cloud cover, acquisition gaps and processing latency can affect the image. See [NASA GIBS access documentation](https://nasa-gibs.github.io/gibs-api-docs/access-basics/).
+
+## Run locally
+
+Python 3.12–3.14 is supported by the current deployment dependency set. Streamlit Community Cloud currently defaults to Python 3.12; if creating a fresh deployment, select Python 3.12 in Advanced settings for the most conservative option.
+
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app/main.py
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run app/main.py
 ```
 
+Then open the local URL shown in the terminal, normally http://localhost:8501.
+
+On Windows, the Python launcher can be used instead:
+
+```bash
+py -m pip install -r requirements.txt
+py -m streamlit run app/main.py
+```
+
+## Deploy on Streamlit Community Cloud
+
+1. Sign in to Streamlit Community Cloud with the GitHub account that can access this repository.
+2. Create a new app and select repository `Abbubakar-khan/earthwise-ai`.
+3. Select branch `compat/streamlit-launch`.
+4. Set the main file path to `app/main.py`.
+5. Deploy. The first run installs the dependencies and may take several minutes.
+
+The app fetches NASA POWER data when a user presses the fetch button, so the deployed app needs outbound internet access. Do not commit passwords, tokens, or private API keys. For commercial weather use, add `OPEN_METEO_API_KEY` to Streamlit Community Cloud app Secrets (TOML format) or the deployment environment; never put the key in Git. Without a commercial key, the weather panel uses the non-commercial evaluation endpoint only.
+
 ## Project structure
+
 - `app/main.py`: Streamlit interface
-- `src/nasa_power.py`: NASA POWER daily API client
-- `src/cleaning.py`: validation and monthly aggregation
-- `src/statistics.py`: Mann–Kendall-style Kendall tau test + Sen slope
-- `src/comparisons.py`: multi-location trend table
+- `src/regions.py`: Pakistan city coordinates and supported variables
+- `src/nasa_power.py`: NASA POWER daily API client and local CSV/metadata saving
+- `src/cleaning.py`: missing-value handling and monthly aggregation
+- `src/statistics.py`: Kendall tau and Sen's slope
 - `src/ai_engine.py`: evidence-constrained explanation templates
+- `tests/`: core calculation tests
 - `docs/`: methodology, sources, validation and roadmap
-- `tests/`: automated tests
 
-## Science safeguards
-- POWER point values are gridded/reanalysis-derived products, not local weather-station observations.
-- Temperature and precipitation are analyzed separately.
-- Daily precipitation is summed to monthly totals; daily temperature is averaged to monthly means.
-- Mann–Kendall significance can be affected by seasonality/autocorrelation. The MVP reports a simple Kendall tau p-value and Sen slope; it does **not** claim a seasonality-corrected trend test.
-- A trend is not a forecast, and correlation does not prove causation.
-- Missing/sentinel values are excluded; the app reports coverage.
-- The AI explanation uses only computed result fields; it does not invent causes.
+## Roadmap (not yet implemented)
 
-## Current supported scope
-NASA POWER daily point data for Lahore, Islamabad, Karachi (T2M and PRECTOTCORR). Add other sources only after this core path is stable.
+Earthwise now includes a 3D globe, NASA GIBS satellite imagery and model-based current weather. Earthquake/fire/flood alert feeds, validated full PBS urban-locality coverage, multi-city comparisons, rigorous seasonal trend methods and future climate scenarios remain planned modules. The animated system status is a visual UI indicator, not a claim of live environmental telemetry.
