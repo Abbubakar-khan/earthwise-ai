@@ -8,7 +8,7 @@ No fake / sample data anywhere. Every number is labelled with source + time.
 Only env var: OPEN_METEO_API_KEY (optional, commercial weather use).
 """
 from pathlib import Path
-import sys, json
+import sys, json, html, time
 from datetime import date, timedelta
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
@@ -26,6 +26,7 @@ from src.live_weather import get_current_conditions, get_weather_forecast, get_n
 from src.air_quality import get_air_quality
 from src.risk import compute_risk, project_trend
 from src.ai_assistant import answer_question
+from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, ticker_html, weather_animation_class
 
 def weather_symbol(code):
     try: code = int(code)
@@ -41,11 +42,18 @@ def weather_symbol(code):
     if 95 <= code <= 99: return "⛈️"
     return "🌤️"
 
-def kpi(label, value, note="", accent="#7ee8d6"):
-    st.markdown(f'<div class="kpi"><div class="kpi-label">{label}</div><div class="kpi-value" style="color:{accent}">{value}</div><div class="kpi-note">{note}</div></div>', unsafe_allow_html=True)
+def kpi(label, value, note="", accent="#7ee8d6", delay_ms=0):
+    st.markdown(f'<div class="kpi" style="animation-delay:{int(delay_ms)}ms"><div class="kpi-label">{label}</div><div class="kpi-value" style="color:{accent}">{value}</div><div class="kpi-note">{note}</div></div>', unsafe_allow_html=True)
 
 def section(title, sub=""):
     st.markdown(f'<div class="ew-section">{title}</div>' + (f'<p class="ew-sub2">{sub}</p>' if sub else ""), unsafe_allow_html=True)
+
+def _stat(label, value):
+    """One compact stat tile (value wraps, never truncates)."""
+    return f'<div class="ew-stat"><div class="ew-stat-label">{html.escape(str(label))}</div><div class="ew-stat-value">{html.escape(str(value))}</div></div>'
+
+def _num(v, fmt):
+    return fmt.format(v) if isinstance(v, (int, float)) else "—"
 
 def safe(fn, label):
     try: return fn()
@@ -143,9 +151,53 @@ div[data-testid="stMetric"]{padding:14px 16px;border:1px solid var(--border);bor
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 """, unsafe_allow_html=True)
+# Live animations (CSS only) + interface polish: consistent hover, focus, card rhythm.
+st.markdown(f"<style>{ANIMATION_CSS}{DESIGN_CSS}{INTRO_CSS}"
+"""
+/* Interface polish — same dark premium look, no new deps */
+.ew-sub2{color:#b0c2ce}
+.card{min-height:118px}
+.card:hover{border-color:rgba(126,232,214,.28)}
+.stTabs [data-baseweb="tab"]:hover{color:#d6e8f0}
+div[data-testid="stMetric"]{min-height:86px}
+.stDownloadButton>button{width:100%}
+[data-testid="stSidebar"] .stButton>button{margin-bottom:2px}
+.ew-chip{transition:border-color .15s}
+.ew-chip:hover{border-color:rgba(126,232,214,.45);color:#d9f2ec}
+</style>
+""", unsafe_allow_html=True)
 if "frames" not in st.session_state: st.session_state.frames = {}
 if "chat" not in st.session_state: st.session_state.chat = []
-st.markdown('<div class="ew-top"><div class="ew-brand">EARTHWISE <span>AI</span> <span style="color:#8fa6b4;font-weight:500">/ PAKISTAN INTELLIGENCE</span></div><div class="ew-live"><i></i> LIVE DATA WORKSPACE</div></div>', unsafe_allow_html=True)
+# Opening intro splash — once per session, ~3s, instead of a blank load.
+# Shown BEFORE any live fetch, so the first thing a visitor sees is the
+# brand, not a spinner. Reduced-motion users see a near-static splash.
+if not st.session_state.get("intro_seen"):
+    st.session_state["intro_seen"] = True
+    st.markdown(intro_html(), unsafe_allow_html=True)
+    time.sleep(3.0)
+    st.rerun()
+st.markdown('<div class="ew-top"><div class="ew-brand">EARTHWISE&nbsp;<span>AI</span>&nbsp;&nbsp;<span class="ew-brand-sub">/ PAKISTAN INTELLIGENCE</span></div><div class="ew-live"><i></i> LIVE DATA WORKSPACE</div></div>', unsafe_allow_html=True)
+
+def empty_state(title, body, steps):
+    """Designed empty state: a bordered card with steps, not a bare notice."""
+    steps_html = "".join(f'<div class="ew-step">{s}</div>' for s in steps)
+    st.markdown(f'<div class="ew-empty"><h3>{title}</h3><p>{body}</p>{steps_html}</div>', unsafe_allow_html=True)
+
+def fetch_current_dataset():
+    """Fetch the sidebar city/indicator/period from NASA POWER and store it.
+    Returns True on success. Used by the empty-state fetch button."""
+    coords = REGIONS[city]
+    try:
+        with st.spinner(f"Fetching {city} climate data from NASA POWER…"):
+            df_new, metadata = retrieve_climate_data(city, coords["latitude"], coords["longitude"], f"{int(start_year)}0101", f"{int(end_year)}1231", variable)
+            slug = f"{city.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{variable.lower()}"
+            save_city_data(df_new, metadata, slug)
+            st.session_state.frames[(city, variable)] = df_new
+        st.toast(f"{city} dataset is ready", icon="🌍")
+        return True
+    except Exception as exc:
+        st.error(f"NASA POWER request failed: {exc}")
+        return False
 
 # ---------- Sidebar: navigation + controls ----------
 PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
@@ -163,8 +215,8 @@ with st.sidebar:
     if city_search.strip():
         city_options = [c for c in city_options if city_search.casefold() in c.casefold()]
     if not city_options:
-        st.warning("No matching city. Try another spelling or region.")
-        st.stop()
+        st.warning("No matching city. Showing all cities — try another spelling or region.")
+        city_options = sorted(REGIONS)
     default_city = "Lahore" if "Lahore" in city_options else city_options[0]
     city = st.selectbox("City", city_options, index=city_options.index(default_city))
     st.caption(f"{REGIONS[city]['province']} · {REGIONS[city]['latitude']:.4f}° N, {REGIONS[city]['longitude']:.4f}° E")
@@ -173,11 +225,12 @@ with st.sidebar:
     st.markdown("### Climate signal")
     variable = st.selectbox("Indicator", list(VARIABLES), format_func=lambda k: f"{VARIABLES[k]['label']} · {VARIABLES[k]['unit']}")
     current_year = date.today().year
-    start_year = st.number_input("Start year", min_value=1981, max_value=current_year, value=2001)
+    start_year = st.number_input("Start year", min_value=1981, max_value=current_year, value=2015)
     end_year = st.number_input("End year", min_value=int(start_year), max_value=current_year, value=max(int(start_year), min(current_year - 1, 2025)))
     fetch = st.button("↗  Retrieve climate data", type="primary", use_container_width=True)
     if st.button("↻  Refresh live weather / AQI", use_container_width=True):
         get_current_conditions.clear(); get_weather_forecast.clear(); get_air_quality.clear()
+        st.session_state["just_refreshed"] = True
         st.rerun()
     st.divider()
     st.caption("SOURCE / NASA POWER Daily Point API · Open-Meteo · CAMS · NASA GIBS")
@@ -208,15 +261,33 @@ if fetch:
             st.error(f"NASA POWER request failed: {exc}")
 
 df = st.session_state.frames.get((city, variable))
+demo_dataset = False
 if df is None:
     slug = f"{city.lower().replace(' ', '_').replace('(', '').replace(')', '')}_{variable.lower()}"
     candidate = Path("data/raw") / f"{slug}_nasa_power_daily.csv"
     if candidate.exists():
         try:
             cached = pd.read_csv(candidate, parse_dates=["date"])
-            if variable in cached.columns: df = cached
+            if variable in cached.columns:
+                df = cached
+                demo_dataset = demo_is_default(city, variable)
         except Exception as exc:
             st.warning(f"Saved climate file could not be read: {exc}")
+# First-load fallback (only for the default Lahore/T2M demo): if the cached
+# demo file is missing — e.g. it was never committed to the repo — fetch the
+# same real NASA POWER range live once per session, so the landing page is
+# never blank. The shipped file is preferred; this only runs when it is absent.
+if df is None and demo_is_default(city, variable) and not st.session_state.get("_demo_fetch_tried"):
+    st.session_state["_demo_fetch_tried"] = True
+    try:
+        with st.spinner("Loading the Lahore demo dataset (NASA POWER, 2015–2025)…"):
+            df_new, metadata = retrieve_climate_data(city, REGIONS[city]["latitude"], REGIONS[city]["longitude"], "20150101", "20251231", variable)
+            save_city_data(df_new, metadata, "lahore_t2m")
+            st.session_state.frames[(city, variable)] = df_new
+            df = df_new
+            demo_dataset = True
+    except Exception:
+        pass  # designed empty state below handles it; never crash first load
 
 # ---------- Live data (real, cached by the src modules) ----------
 lat, lon = REGIONS[city]["latitude"], REGIONS[city]["longitude"]
@@ -224,6 +295,8 @@ with st.spinner("Loading live weather and air quality…"):
     weather = safe(lambda: get_current_conditions(lat, lon, city), "Current conditions")
     forecast = safe(lambda: get_weather_forecast(lat, lon), "7-day forecast")
     aqi = safe(lambda: get_air_quality(lat, lon, city), "Air quality")
+if st.session_state.pop("just_refreshed", False):
+    st.toast("Live weather / AQI refreshed", icon="🌍")
 
 # ---------- Computed climate context ----------
 spec = VARIABLES[variable]
@@ -240,10 +313,15 @@ if df is not None:
             latest_anomaly = float(anomaly_df.dropna(subset=["anomaly"]).tail(1)["anomaly"].iloc[0]) if anomaly_df["anomaly"].notna().any() else None
         risk = compute_risk(monthly, variable, trend, latest_anomaly,
                             current_temp=weather.get("temperature_2m") if weather else None,
-                            us_aqi=aqi["current"].get("us_aqi") if aqi else None)
+                            us_aqi=(aqi.get("current") or {}).get("us_aqi") if aqi else None)
         proj_df, proj_note = project_trend(monthly, variable, trend, years_ahead=10)
     except Exception as exc:
         st.error(f"Climate analysis failed for the loaded dataset: {exc}")
+# Guard: if analysis failed, meta/monthly are None — treat as no usable
+# dataset so no page crashes on meta['first_date'] etc.
+if df is not None and meta is None:
+    st.error("Climate analysis failed for the loaded dataset — showing the fetch prompt instead of a broken page.")
+    df = None
 
 forecast_summary = None
 if forecast:
@@ -261,6 +339,16 @@ assistant_ctx = {"city": city, "weather": weather, "air_quality": aqi, "trend": 
                  "variable_label": spec["label"], "unit": analysis_unit,
                  "latest_anomaly": latest_anomaly, "risk": risk, "forecast_summary": forecast_summary}
 
+# Live ticker context (real values only; shared by Overview + Weather & Maps)
+_ticker_ctx = {"city": city,
+               "temperature": weather.get("temperature_2m") if weather else None,
+               "condition": weather.get("condition_text") if weather else None,
+               "us_aqi": aqi["current"].get("us_aqi") if aqi and isinstance(aqi.get("current"), dict) else None,
+               "aqi_label": aqi.get("aqi_label") if aqi else None,
+               "pm2_5": aqi["current"].get("pm2_5") if aqi and isinstance(aqi.get("current"), dict) else None,
+               "provider_time": (weather.get("provider_time") if weather else None) or (aqi.get("provider_time") if aqi else None)}
+_ticker_html = ticker_html(build_ticker_items(_ticker_ctx))
+
 def plot_style(fig, height=360):
     fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(7,20,34,.35)",
                       font=dict(family="DM Sans", color="#b7cbd9"), margin=dict(l=5, r=10, t=18, b=5),
@@ -270,59 +358,81 @@ def plot_style(fig, height=360):
 
 # ================= OVERVIEW =================
 if page == "Overview":
-    st.markdown(f"""<section class="ew-hero"><div class="ew-eyebrow">PAKISTAN · WEATHER & EARTH OBSERVATION · {city.upper()}</div>
+    _wx_code = weather.get("weather_code") if weather else None
+    _wx_class = weather_animation_class(_wx_code)
+    _ticker = _ticker_html
+    _hero_now = hero_now_html(weather, aqi)
+    st.markdown(f"""<section class="ew-hero ew-hero-anim {_wx_class}"><div class="ew-hero-left"><div class="ew-eyebrow">PAKISTAN · WEATHER & EARTH OBSERVATION · {city.upper()}</div>
     <div class="ew-title">Understand the planet.<br>Act on the evidence.</div>
     <div class="ew-sub">One workspace for live weather, real air quality, satellite evidence and long-term climate signals across Pakistan — with transparent sources and scientific context.</div>
-    <div><span class="ew-chip">NASA EARTH DATA</span><span class="ew-chip">LIVE AIR QUALITY</span><span class="ew-chip">CLIMATE TRENDS</span><span class="ew-chip">RISK SCREENING</span></div></section>""", unsafe_allow_html=True)
+    <div><span class="ew-chip">NASA EARTH DATA</span><span class="ew-chip">LIVE AIR QUALITY</span><span class="ew-chip">CLIMATE TRENDS</span><span class="ew-chip">RISK SCREENING</span></div></div>{_hero_now}</section>""", unsafe_allow_html=True)
+    if _ticker:
+        st.markdown(_ticker, unsafe_allow_html=True)
+    else:
+        st.info("Live ticker unavailable — live weather and air quality could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    _updated = _ticker_ctx["provider_time"]
+    st.markdown(f'<p class="ew-updated"><span class="live-dot"></span>LIVE · Updated {_updated if _updated else "—"} · Open-Meteo / CAMS model data, not station observations</p>', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         if weather and isinstance(weather.get("temperature_2m"), (int, float)):
-            kpi("Air temperature", f"{weather['temperature_2m']:.1f} °C", f"{weather.get('condition_text','')} · Feels like {weather.get('apparent_temperature','—')} °C")
-        else: kpi("Air temperature", "—", "Live weather unavailable — check connection and retry.")
+            kpi("Air temperature", f"{weather['temperature_2m']:.1f} °C", f"{weather.get('condition_text','')} · Feels like {weather.get('apparent_temperature','—')} °C", delay_ms=0)
+        else: kpi("Air temperature", "—", "Live weather unavailable — check connection and retry.", delay_ms=0)
     with c2:
         if aqi:
             cur = aqi["current"]
-            kpi("US AQI", f"{cur.get('us_aqi','—'):.0f}" if isinstance(cur.get("us_aqi"), (int, float)) else "—", f"{aqi['aqi_label']} · PM2.5 {cur.get('pm2_5','—')} µg/m³", accent=aqi["aqi_colour"])
-        else: kpi("US AQI", "—", "Air quality unavailable — check connection and retry.")
+            kpi("US AQI", f"{cur.get('us_aqi','—'):.0f}" if isinstance(cur.get("us_aqi"), (int, float)) else "—", f"{aqi['aqi_label']} · PM2.5 {cur.get('pm2_5','—')} µg/m³", accent=aqi["aqi_colour"], delay_ms=80)
+        else: kpi("US AQI", "—", "Air quality unavailable — check connection and retry.", delay_ms=80)
     with c3:
         if trend and trend.get("status") == "ok":
-            kpi("Trend / decade", f"{trend['sen_slope_per_decade']:+.3g} {analysis_unit}", f"{spec['label']} · {trend['direction']} · p={trend.get('p_value')}")
-        else: kpi("Trend / decade", "—", "Fetch NASA POWER climate data in the sidebar to unlock the trend.")
+            _p = trend.get("p_value")
+            kpi("Trend / decade", f"{trend['sen_slope_per_decade']:+.3g} {analysis_unit}", f"{spec['label']} · {trend['direction']} · p={_p:.3g}" if _p is not None else f"{spec['label']} · {trend['direction']} · p unavailable", delay_ms=160)
+        else: kpi("Trend / decade", "—", "Fetch NASA POWER climate data in the sidebar to unlock the trend.", delay_ms=160)
     with c4:
         if risk and risk.get("composite") is not None:
-            kpi("Risk screening", f"{risk['composite']}/100 · {risk['composite_label']}", "Screening only — not an official warning.")
-        else: kpi("Risk screening", "—", "Needs climate data + live weather / AQI.")
+            kpi("Risk screening", f"{risk['composite']}/100 · {risk['composite_label']}", "Screening only — not an official warning.", delay_ms=240)
+        else: kpi("Risk screening", "—", "Needs climate data + live weather / AQI.", delay_ms=240)
     section("Live now", f"{city} · {REGIONS[city]['province']} · Model-based conditions, cached 15 min · Air quality cached 30 min")
     a, b = st.columns(2)
     with a:
-        st.markdown('<div class="card"><b>Current conditions</b><br><span style="color:#9db2c0;font-size:.78rem">Open-Meteo · model estimate, not a station observation</span></div>', unsafe_allow_html=True)
+        # ONE card: header + stats + source line all inside, no dead header box.
         if weather:
-            w1, w2, w3, w4 = st.columns(4)
-            w1.metric("Humidity", f"{weather.get('relative_humidity_2m','—'):.0f}%" if isinstance(weather.get("relative_humidity_2m"), (int, float)) else "—")
-            w2.metric("Wind", f"{weather.get('wind_speed_10m','—'):.1f} km/h" if isinstance(weather.get("wind_speed_10m"), (int, float)) else "—")
-            w3.metric("Precipitation", f"{weather.get('precipitation','—'):.1f} mm" if isinstance(weather.get("precipitation"), (int, float)) else "—")
-            w4.metric("Cloud cover", f"{weather.get('cloud_cover','—')}%" if weather.get("cloud_cover") is not None else "—")
-            st.caption(f"{weather.get('condition_text','')} · Provider time {weather.get('provider_time')} ({weather.get('timezone')}) · Source: {weather.get('source')}")
-        else: st.info("Current conditions could not be loaded.")
+            _wstats = "".join([
+                _stat("Humidity", _num(weather.get("relative_humidity_2m"), "{:.0f}%")),
+                _stat("Wind", _num(weather.get("wind_speed_10m"), "{:.1f} km/h")),
+                _stat("Precipitation", _num(weather.get("precipitation"), "{:.1f} mm")),
+                _stat("Cloud cover", f"{weather.get('cloud_cover')}%" if weather.get("cloud_cover") is not None else "—"),
+            ])
+            _wfoot = html.escape(str(weather.get("condition_text", ""))) + f" · Provider time {html.escape(str(weather.get('provider_time')))} ({html.escape(str(weather.get('timezone')))}) · Source: {html.escape(str(weather.get('source')))}"
+            st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>Current conditions</b><span>Open-Meteo · model estimate, not a station observation</span></div><div class="ew-stats">{_wstats}</div><div class="ew-card-foot">{_wfoot}</div></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="card ew-live-card"><div class="ew-card-head"><b>Current conditions</b><span>Open-Meteo · model estimate, not a station observation</span></div><p style="color:#b0c2ce;font-size:.85rem;margin-top:12px">Current conditions could not be loaded. Check your connection and press <b>Refresh live weather / AQI</b> in the sidebar.</p></div>', unsafe_allow_html=True)
     with b:
-        st.markdown('<div class="card"><b>Air quality snapshot</b><br><span style="color:#9db2c0;font-size:.78rem">Open-Meteo Air Quality (CAMS) · model estimate</span></div>', unsafe_allow_html=True)
         if aqi:
             cur = aqi["current"]
-            st.markdown(f"**US AQI {cur.get('us_aqi','—')} — {aqi['aqi_label']}** · Dominant pollutant: {aqi['dominant_pollutant']}")
-            st.write(aqi["aqi_advice"])
-            q1, q2, q3 = st.columns(3)
-            q1.metric("PM2.5", f"{cur.get('pm2_5','—')} µg/m³"); q2.metric("PM10", f"{cur.get('pm10','—')} µg/m³"); q3.metric("Ozone", f"{cur.get('ozone','—')} µg/m³")
-            st.caption(f"Provider time {aqi.get('provider_time')} ({aqi.get('timezone')}) · Source: {aqi.get('source')}")
-        else: st.info("Air quality could not be loaded.")
+            _astats = "".join([
+                _stat("PM2.5", f"{cur.get('pm2_5', '—')} µg/m³"),
+                _stat("PM10", f"{cur.get('pm10', '—')} µg/m³"),
+                _stat("Ozone", f"{cur.get('ozone', '—')} µg/m³"),
+            ])
+            st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>Air quality snapshot — US AQI {html.escape(str(cur.get("us_aqi", "—")))} · {html.escape(str(aqi["aqi_label"]))}</b><span>Open-Meteo Air Quality (CAMS) · model estimate · Dominant pollutant: {html.escape(str(aqi["dominant_pollutant"]))}</span></div><p style="color:#e8f1f5;font-size:.85rem;margin:12px 0 0">{html.escape(str(aqi["aqi_advice"]))}</p><div class="ew-stats cols-3">{_astats}</div><div class="ew-card-foot">Provider time {html.escape(str(aqi.get("provider_time")))} ({html.escape(str(aqi.get("timezone")))}) · Source: {html.escape(str(aqi.get("source")))}</div></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="card ew-live-card"><div class="ew-card-head"><b>Air quality snapshot</b><span>Open-Meteo Air Quality (CAMS) · model estimate</span></div><p style="color:#b0c2ce;font-size:.85rem;margin-top:12px">Air quality could not be loaded. Check your connection and press <b>Refresh live weather / AQI</b> in the sidebar.</p></div>', unsafe_allow_html=True)
     if df is None:
         section("Your climate workspace", "Three steps to your first trend")
         x1, x2, x3 = st.columns(3)
         with x1: kpi("01 · Select", "Choose a city", "101 mapped urban centres across Pakistan.")
         with x2: kpi("02 · Retrieve", "Connect to NASA", "Fetch daily historical climate estimates.")
         with x3: kpi("03 · Discover", "Read the signal", "Trends, anomalies and risk screening.")
-        st.info("Choose a city and climate indicator in the left panel, set the analysis period, then select **Retrieve climate data**.")
+        empty_state("No climate dataset loaded yet",
+                    "Pick a city and indicator in the left panel, set the analysis period, and fetch it from NASA POWER — or use the button below to fetch it right now. The Lahore demo dataset (T2M 2015–2025) loads automatically on the default view.",
+                    ["1 · Select a city and indicator in the sidebar", "2 · Press the button below — or Retrieve climate data in the sidebar", "3 · The trend, risk score and charts appear on this page"])
+        if st.button(f"Fetch {city} climate data now", type="primary", use_container_width=True):
+            if fetch_current_dataset():
+                st.rerun()
     else:
         section(f"{city} / {spec['label']}", f"Monthly analysis · {analysis_unit} · {meta['first_date']} to {meta['last_date']} · Coverage {meta['coverage_pct']}%")
+        if demo_dataset:
+            st.caption("Demo dataset: Lahore T2M 2015–2025 · NASA POWER (included file) — press Retrieve climate data in the sidebar to fetch a different city, indicator or period.")
         fig = px.area(monthly, x="date", y=variable, labels={"date": "Month", variable: f"{spec['label']} ({analysis_unit})"})
         fig.update_traces(line=dict(color="#6ce7f4", width=2.5), fillcolor="rgba(74,196,224,.12)", hovertemplate="%{x|%b %Y}<br>%{y:.2f}<extra></extra>")
         st.plotly_chart(plot_style(fig, 380), use_container_width=True, config={"displaylogo": False, "responsive": True})
@@ -333,8 +443,15 @@ if page == "Overview":
 elif page == "Climate Analytics":
     section(f"Climate Analytics — {city}", f"{spec['label']} · {analysis_unit} · NASA POWER daily point data, aggregated monthly")
     if df is None:
-        st.info("No climate dataset loaded yet. Select a city, indicator and period in the sidebar, then press **Retrieve climate data**. Previously downloaded data in `data/raw/` is loaded automatically when it matches the city + indicator.")
+        empty_state("No climate dataset loaded yet",
+                    "This page needs a historical dataset. It loads automatically for the Lahore T2M demo — for any other city or indicator, fetch it live from NASA POWER.",
+                    ["1 · Choose the city, indicator and period in the sidebar", f"2 · Press the button below to fetch {city} now", "3 · Coverage, trend, anomalies and the AI Earth Scientist appear here"])
+        if st.button(f"Fetch {city} climate data now", type="primary", use_container_width=True):
+            if fetch_current_dataset():
+                st.rerun()
         st.stop()
+    if demo_dataset:
+        st.caption("Demo dataset: Lahore T2M 2015–2025 · NASA POWER (included file) — press Retrieve climate data in the sidebar to fetch a different city, indicator or period.")
     m1, m2, m3, m4 = st.columns(4)
     with m1: kpi("Data coverage", f"{meta['coverage_pct']}%", f"{meta['valid_rows']:,} valid daily records")
     with m2: kpi("Monthly observations", f"{len(monthly):,}", f"{meta['first_date']} → {meta['last_date']}")
@@ -364,7 +481,7 @@ elif page == "Climate Analytics":
             st.plotly_chart(plot_style(afig, 340), use_container_width=True, config={"displaylogo": False})
             st.caption("Baseline: each calendar month's mean across this selected dataset. This is a within-period seasonal departure, not a WMO 1991–2020 climate normal.")
             with st.expander("Inspect monthly anomaly values"):
-                st.dataframe(anomaly_df.tail(36).round(3), use_container_width=True, hide_index=True)
+                st.dataframe(anomaly_df.tail(36).round({variable: 3, "anomaly": 3, "climatology": 3, "standardized_anomaly": 3}), use_container_width=True, hide_index=True)
         else: st.info("Not enough monthly observations to calculate a seasonal baseline.")
     with t3:
         st.markdown('<div class="ew-ai"><b style="color:#7ee8d6;font-size:.65rem;letter-spacing:.14em">EARTHWISE INTELLIGENCE · ANALYSIS ENGINE</b><h3>AI Earth Scientist</h3><p style="color:#afc2cd;font-size:.8rem">An evidence-linked interpretation generated from the selected city\'s calculated climate statistics — not a free-form forecast.</p></div>', unsafe_allow_html=True)
@@ -376,7 +493,10 @@ elif page == "Climate Analytics":
     # Compare cities — on demand, real fetches only
     section("Compare cities", "Same indicator, same period — real NASA POWER fetches, cached 24 h")
     compare = st.multiselect("Add cities to compare (max 3)", [c for c in sorted(REGIONS) if c != city], max_selections=3)
-    if st.button("Compare selected cities", use_container_width=True) and compare:
+    compare_clicked = st.button("Compare selected cities", type="primary", use_container_width=True)
+    if compare_clicked and not compare:
+        st.warning("Select at least one city above first, then press **Compare selected cities**.")
+    if compare_clicked and compare:
         frames = {}
         with st.spinner("Fetching comparison cities from NASA POWER…"):
             for cname in compare:
@@ -391,7 +511,10 @@ elif page == "Climate Analytics":
                 rows.append({"City": cname, "Direction": r2.get("direction", "—"), "Sen slope / decade": r2.get("sen_slope_per_decade"), "p-value": r2.get("p_value"), "Months": r2.get("n")})
             rows.insert(0, {"City": city, "Direction": trend.get("direction", "—") if trend else "—", "Sen slope / decade": trend.get("sen_slope_per_decade") if trend else None, "p-value": trend.get("p_value") if trend else None, "Months": trend.get("n") if trend else None})
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.toast(f"Compared {len(frames)} cit{'y' if len(frames) == 1 else 'ies'} with {city}", icon="📊")
             st.caption("Sen's slope per decade, Kendall p-value. Interpret cautiously — no seasonality / autocorrelation correction in this MVP.")
+        else:
+            st.warning("No comparison data could be fetched — check your connection and try again.")
 
 # ================= AIR QUALITY =================
 elif page == "Air Quality":
@@ -439,30 +562,30 @@ elif page == "Air Quality":
 # ================= WEATHER & MAPS =================
 elif page == "Weather & Maps":
     section(f"Weather & Maps — {city}", "Model forecast for planning · Not an official PMD warning or emergency alert")
-    if forecast:
-        daily = forecast["daily"]; n = min(7, len(daily.get("time", [])))
-        for offset in range(0, n, 4):
-            cols = st.columns(min(4, n - offset))
-            for col, i in zip(cols, range(offset, min(offset + 4, n))):
-                code = daily.get("weather_code", [None]*n)[i]
-                try: code_int = int(code) if code is not None and pd.notna(code) else None
-                except (TypeError, ValueError): code_int = None
-                condition = WEATHER_CODES.get(code_int, "Conditions unavailable")
-                day_label = pd.to_datetime(daily["time"][i]).strftime("%a, %d %b")
-                high, low = daily.get("temperature_2m_max", [None]*n)[i], daily.get("temperature_2m_min", [None]*n)[i]
-                rain, rain_mm = daily.get("precipitation_probability_max", [None]*n)[i], daily.get("precipitation_sum", [None]*n)[i]
-                wind, uv = daily.get("wind_speed_10m_max", [None]*n)[i], daily.get("uv_index_max", [None]*n)[i]
-                with col:
-                    if all(isinstance(v, (int, float)) for v in (high, low, rain, rain_mm, wind, uv)):
-                        st.markdown(f'<div class="card" style="margin-bottom:10px"><div style="color:#9db2c0;font-size:.66rem;font-weight:700;letter-spacing:.08em">{day_label}</div><div style="margin:10px 0;font-size:.85rem"><span style="font-size:1.3rem">{weather_symbol(code)}</span> {condition}</div><div style="font:600 1.5rem Space Grotesk">{high:.0f}° <span style="color:#9db2c0;font-size:.95rem">/ {low:.0f}°</span></div><div style="color:#9db2c0;font-size:.7rem;line-height:1.6">Rain chance <b style="color:#e8f1f5">{rain:.0f}%</b> · Rainfall <b style="color:#e8f1f5">{rain_mm:.1f} mm</b><br>Max wind <b style="color:#e8f1f5">{wind:.0f} km/h</b> · UV max <b style="color:#e8f1f5">{uv:.1f}</b></div></div>', unsafe_allow_html=True)
-                    else: st.info(f"{day_label}: forecast details unavailable")
-        hourly = forecast["hourly"]
-        hdf = pd.DataFrame({"Time": pd.to_datetime(hourly["time"]), "Temperature (°C)": hourly["temperature_2m"]}).dropna()
-        hfig = px.line(hdf, x="Time", y="Temperature (°C)")
-        hfig.update_traces(line=dict(color="#66e3f2", width=2.7), hovertemplate="%{x|%a %H:%M}<br>%{y:.1f} °C<extra></extra>")
-        st.markdown("**Next 24 hours · Temperature outlook**")
-        st.plotly_chart(plot_style(hfig, 280), use_container_width=True, config={"displayModeBar": False})
-        st.caption(f"Forecast provider: {forecast['source']} · Generated at {forecast['forecast_generated_at']} ({forecast['timezone']}) · Forecasts can change as new model runs arrive.")
+    if _ticker_html:
+        st.markdown(_ticker_html, unsafe_allow_html=True)
+    if forecast and isinstance(forecast.get("daily"), dict) and forecast["daily"].get("time"):
+        daily = forecast["daily"]
+        # One clean 7-day strip (7 cols desktop / 4 tablet / 2 mobile) — no
+        # fractured 4+3 rows, no content wedged in between.
+        _fc = forecast_cards_html(daily)
+        if _fc:
+            st.markdown("**7-day forecast**")
+            st.markdown(_fc, unsafe_allow_html=True)
+        else:
+            st.info("7-day forecast details are unavailable.")
+        hourly = forecast.get("hourly") or {}
+        try:
+            hdf = pd.DataFrame({"Time": pd.to_datetime(hourly.get("time", [])), "Temperature (°C)": hourly.get("temperature_2m", [])}).dropna()
+            if hdf.empty:
+                raise ValueError("No hourly temperature values were returned.")
+            hfig = px.line(hdf, x="Time", y="Temperature (°C)")
+            hfig.update_traces(line=dict(color="#66e3f2", width=2.7), hovertemplate="%{x|%a %H:%M}<br>%{y:.1f} °C<extra></extra>")
+            st.markdown("**Next 24 hours · Temperature outlook**")
+            st.plotly_chart(plot_style(hfig, 280), use_container_width=True, config={"displayModeBar": False})
+        except Exception as exc:
+            st.info(f"Hourly temperature outlook is unavailable: {exc}")
+        st.caption(f"Forecast provider: {forecast.get('source', 'Open-Meteo')} · Generated at {forecast.get('forecast_generated_at', '—')} ({forecast.get('timezone', '')}) · Forecasts can change as new model runs arrive.")
     else: st.warning("Forecast is temporarily unavailable.")
     section("Earth observation workspace", "National map · 3D globe · NASA satellite evidence")
     wtab, gtab, stab, ctab = st.tabs(["🌡️  National conditions", "🌐  Earth view", "🛰️  Satellite evidence", "📍  City directory"])
@@ -487,6 +610,8 @@ elif page == "Weather & Maps":
             if not heat.empty: st.dataframe(heat[["city", "province", "temperature", "apparent_temperature", "humidity"]].rename(columns={"city": "City", "province": "Region", "temperature": "Air °C", "apparent_temperature": "Apparent °C", "humidity": "Humidity %"}).round(1), use_container_width=True, hide_index=True)
             st.dataframe(ndf[["city", "condition", "temperature", "apparent_temperature", "humidity", "precipitation", "wind_speed"]].rename(columns={"city": "City", "condition": "Conditions", "temperature": "Temperature °C", "apparent_temperature": "Apparent °C", "humidity": "Humidity %", "precipitation": "Precipitation mm", "wind_speed": "Wind km/h"}), use_container_width=True, hide_index=True)
             st.download_button("↓ Download Pakistan city weather snapshot (CSV)", ndf.to_csv(index=False), "earthwise_pakistan_city_weather.csv", "text/csv", use_container_width=True)
+        else:
+            st.info("Pakistan-wide weather map could not be loaded — check your connection and press **Refresh live weather / AQI** in the sidebar.")
     with gtab:
         st.caption("Interactive textured Earth · City markers · Drag to rotate and scroll to zoom")
         render_earth_globe(city)
@@ -516,6 +641,25 @@ elif page == "Weather & Maps":
 elif page == "AI Assistant":
     section("AI Environmental Assistant", f"Answers only from the real data loaded for {city} — live weather, AQI, trend, anomalies and risk. It will say when data is missing instead of guessing.")
     st.markdown('<div class="ew-ai"><b style="color:#7ee8d6;font-size:.65rem;letter-spacing:.14em">EARTHWISE INTELLIGENCE</b><h3>Ask about this city</h3><p style="color:#afc2cd;font-size:.8rem">Try: “What is the air quality?”, “What is the temperature trend?”, “Is there a risk?”, “What is the weather now?”</p></div>', unsafe_allow_html=True)
+    if not st.session_state.chat:
+        st.session_state.chat.append(("assistant", f"Hi — I'm EarthWise AI, answering only from the real data loaded for {city} right now: live weather, air quality, the climate trend, anomalies and the risk score. Ask me one of the questions below, or type your own. If the data isn't loaded, I'll say so instead of guessing."))
+    # Fill the page: what it can answer + one real example answer, so the
+    # chat input is never sitting under a large blank void.
+    _cap1, _cap2 = st.columns(2)
+    with _cap1:
+        st.markdown('<div class="ew-assistant-cap"><b>What I can answer</b><ul><li>Current weather and the 7-day forecast</li><li>Live air quality (US AQI, PM2.5, dominant pollutant)</li><li>Temperature trend — direction, Sen slope, p-value</li><li>Seasonal anomalies and the risk screening score</li></ul></div>', unsafe_allow_html=True)
+    with _cap2:
+        _example = ""
+        if aqi:
+            try:
+                _example = answer_question("What is the air quality?", assistant_ctx)
+            except Exception:
+                _example = ""
+        if _example:
+            _short = _example if len(_example) <= 240 else _example[:237].rsplit(" ", 1)[0] + "…"
+            st.markdown(f'<div class="ew-assistant-cap"><b>Example — “What is the air quality?”</b><ul><li>{html.escape(_short)}</li></ul></div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="ew-assistant-cap"><b>Example — “What is the air quality?”</b><ul><li>Air quality is loading — press <b>Refresh live weather / AQI</b> in the sidebar and ask again.</li></ul></div>', unsafe_allow_html=True)
     sugg = st.columns(4)
     prompts = ["What is the air quality?", "What is the temperature trend?", "What is the weather now?", "Is there a risk?"]
     for col, p in zip(sugg, prompts):
@@ -539,9 +683,17 @@ elif page == "AI Assistant":
 elif page == "Risk & Outlook":
     section(f"Climate Risk & Outlook — {city}", "Transparent screening from real data · Straight-line Sen-slope projection, NOT a climate-model forecast")
     if df is None or trend is None or trend.get("status") != "ok":
-        st.info("Risk screening needs a climate dataset. Fetch NASA POWER data in the sidebar first (at least 24 monthly observations). Live weather and AQI already contribute when available.")
+        empty_state("Risk screening needs a climate dataset",
+                    "Fetch NASA POWER data first (at least 24 monthly observations). Live weather and AQI already contribute when available — they are shown below as a partial screening.",
+                    [f"1 · Press the button below to fetch {city} now", "2 · Or use Retrieve climate data in the sidebar", "3 · The composite score and 10-year outlook appear here"])
+        if st.button(f"Fetch {city} climate data now", type="primary", use_container_width=True):
+            if fetch_current_dataset():
+                st.rerun()
         if risk and risk.get("composite") is not None:
             st.metric("Partial screening (live data only)", f"{risk['composite']}/100 · {risk['composite_label']}")
+        st.stop()
+    if risk is None:
+        st.error("Risk screening could not be computed for this dataset — try fetching the climate data again.")
         st.stop()
     r1, r2, r3, r4 = st.columns(4)
     with r1: kpi("Composite screening", f"{risk['composite']}/100", risk["composite_label"], accent="#ffd36a")
@@ -558,7 +710,7 @@ elif page == "Risk & Outlook":
         pfig.add_trace(go.Scatter(x=proj_df["date"], y=proj_df["high_95"], mode="lines", line=dict(width=0), showlegend=False))
         pfig.add_trace(go.Scatter(x=proj_df["date"], y=proj_df["low_95"], mode="lines", line=dict(width=0), fill="tonexty", fillcolor="rgba(255,211,106,.15)", name="95% slope CI"))
         st.plotly_chart(plot_style(pfig, 380), use_container_width=True, config={"displaylogo": False})
-        st.dataframe(proj_df.round(3), use_container_width=True, hide_index=True)
+        st.dataframe(proj_df.round({"projected": 3, "low_95": 3, "high_95": 3}), use_container_width=True, hide_index=True)
         st.download_button("↓ Download 10-year projection (CSV)", proj_df.to_csv(index=False), f"{city.lower().replace(' ','_')}_{variable.lower()}_10y_projection.csv", "text/csv", use_container_width=True)
     st.warning("⚠️ This outlook is a straight-line extrapolation of the historical Sen's slope. It is NOT a climate-model projection, weather forecast or disaster prediction. Do not use it for emergency planning — use PMD and official climate projections.")
     with st.expander("How the risk score is built"):
@@ -572,7 +724,12 @@ elif page == "Risk & Outlook":
 elif page == "Data & Downloads":
     section("Data & Downloads", "Every file below comes from a real API response — raw NASA POWER CSV + metadata are saved on fetch")
     if df is None:
-        st.info("No climate dataset loaded yet. Fetch data from the sidebar, or load a previously saved file from `data/raw/`.")
+        empty_state("No climate dataset loaded yet",
+                    "Fetch a dataset and the monthly table, CSV downloads and data provenance appear here. The Lahore T2M demo (2015–2025) loads automatically on the default view.",
+                    [f"1 · Press the button below to fetch {city} now", "2 · Or use Retrieve climate data in the sidebar", "3 · Monthly data, anomalies and the projection become downloadable"])
+        if st.button(f"Fetch {city} climate data now", type="primary", use_container_width=True):
+            if fetch_current_dataset():
+                st.rerun()
     else:
         st.markdown(f"**{city} · {spec['label']}** · {meta['first_date']} to {meta['last_date']} · Coverage {meta['coverage_pct']}% · {meta['valid_rows']:,} valid daily records")
         st.dataframe(monthly, use_container_width=True, hide_index=True)
@@ -580,8 +737,10 @@ elif page == "Data & Downloads":
         with d1: st.download_button("↓ Monthly data (CSV)", monthly.to_csv(index=False), f"{city.lower().replace(' ','_')}_{variable.lower()}_monthly.csv", "text/csv", use_container_width=True)
         with d2:
             if anomaly_df is not None: st.download_button("↓ Seasonal anomalies (CSV)", anomaly_df.to_csv(index=False), f"{city.lower().replace(' ','_')}_{variable.lower()}_seasonal_anomalies.csv", "text/csv", use_container_width=True)
+            else: st.caption("Seasonal anomalies unavailable — not enough monthly data.")
         with d3:
             if proj_df is not None and not proj_df.empty: st.download_button("↓ 10-year projection (CSV)", proj_df.to_csv(index=False), f"{city.lower().replace(' ','_')}_{variable.lower()}_10y_projection.csv", "text/csv", use_container_width=True)
+            else: st.caption("10-year projection unavailable — needs a valid trend.")
         with st.expander("Data provenance & coordinates"):
             st.write("**Source:** NASA POWER Daily Point API"); st.write("**Coordinates:**", REGIONS[city])
             st.write("**Requested period:**", meta["first_date"], "to", meta["last_date"]); st.write("**NASA POWER parameter:**", variable)
