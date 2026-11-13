@@ -6,3 +6,7 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+# Demo dataset is intentionally committed: the landing page loads it by
+# default, so without it the live site shows blank Trend/Risk on first load.
+!data/raw/lahore_t2m_nasa_power_daily.csv
+!data/raw/lahore_t2m_nasa_power_metadata.json
