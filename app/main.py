@@ -27,6 +27,10 @@ from src.air_quality import get_air_quality
 from src.risk import compute_risk, project_trend
 from src.ai_assistant import answer_question
 from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, ticker_html, weather_animation_class
+from src.geolocation import (
+    GEO_QUERY_LAT, GEO_QUERY_LON, GEO_QUERY_STATUS,
+    parse_geo_query_params, resolve_detected_location, reverse_geocode,
+)
 
 def weather_symbol(code):
     try: code = int(code)
@@ -209,6 +213,111 @@ def fetch_current_dataset():
 if "_nav_target" in st.session_state:
     st.session_state["page"] = st.session_state.pop("_nav_target")
 
+def _on_sidebar_city_change():
+    # Keep the main-area picker in sync with the sidebar picker.
+    st.session_state["city_main"] = st.session_state["City"]
+
+def _on_main_city_change():
+    # Keep the sidebar picker in sync with the main-area picker, and reset
+    # the province filter so the picked city is always in its options.
+    st.session_state["City"] = st.session_state["city_main"]
+    st.session_state["Province / Region"] = "All regions"
+
+def _request_geo():
+    # "Use my location" tapped: arm a fresh detection. geo_attempted is
+    # reset so the new result is applied when it arrives.
+    st.session_state["geo"] = None
+    st.session_state["geo_note"] = None
+    st.session_state["geo_attempted"] = False
+    st.session_state["geo_request"] = True
+    st.session_state["geo_request_id"] = int(st.session_state.get("geo_request_id", 0)) + 1
+
+def _clear_geo():
+    # "Change" tapped: drop the exact-position override, keep the city.
+    # geo_attempted stays True so the app does not auto-prompt again.
+    st.session_state["geo"] = None
+    st.session_state["geo_note"] = None
+    st.session_state["geo_request"] = False
+
+# ---------- Auto location detect ----------
+# Two channels feed the same apply step, and both are consumed at most
+# once per session:
+#  (1) the vendored custom component (components/geolocation) — the in-tab
+#      channel. Its JS calls navigator.geolocation and returns the coords
+#      with Streamlit.setComponentValue. A plain components.html snippet
+#      CANNOT do this: its iframe sandbox has no allow-top-navigation, so
+#      passing coords back via ?geo_lat= query params is blocked (verified
+#      2026-11-14 in headless Chromium — assigning window.parent.location
+#      throws "does not have permission to navigate the target frame").
+#      The component's postMessage bridge is not affected by the sandbox.
+#  (2) ?geo_lat=&geo_lon=&geo_status= query params — fallback channel, used
+#      by tests and by any link carrying a detected position. Consumed here,
+#      then cleared from the URL so a visitor's coordinates are never left
+#      in a shareable link.
+# Denial / timeout / unavailable fall back silently to the manual picker
+# with a small note — never an error popup. Location is used only in this
+# browser session, never stored, uploaded or shared except as coordinates
+# sent to the same weather APIs the app already uses (Open-Meteo / CAMS).
+_GEO_COMPONENT_DIR = Path(__file__).resolve().parents[1] / "components" / "geolocation"
+_geo_component = components.declare_component("earthwise_geolocation", path=str(_GEO_COMPONENT_DIR))
+
+def _apply_detected_location(latitude, longitude):
+    """Resolve coords to a catalogue city and switch the app to it.
+
+    Exact coords are kept for live weather/AQI; climate history uses the
+    matched catalogue city. Points both pickers at the matched city (the
+    province filter is reset so the city is always in the sidebar options).
+    Called before the sidebar widgets are created, so they adopt it.
+    """
+    try:
+        locality = reverse_geocode(latitude, longitude)
+    except Exception:
+        locality = None
+    resolved = resolve_detected_location(latitude, longitude, locality)
+    st.session_state["geo"] = resolved
+    st.session_state["geo_attempted"] = True
+    st.session_state["geo_request"] = False
+    st.session_state["Province / Region"] = "All regions"
+    st.session_state["City"] = resolved["city"]
+    st.session_state["city_main"] = resolved["city"]
+    return True
+
+def _note_geo_declined(status):
+    st.session_state["geo_attempted"] = True
+    st.session_state["geo_request"] = False
+    st.session_state["geo_note"] = {
+        "denied": "Location access declined — pick a city below.",
+        "timeout": "Location request timed out — pick a city below.",
+        "unavailable": "Location is unavailable on this device or browser — pick a city below.",
+    }.get(status, "Location is unavailable — pick a city below.")
+
+# Channel (2): query params first — they are explicit and testable.
+# Consumed once; always cleared from the URL afterwards so a visitor's
+# coordinates are never left in a shareable link.
+_geo_qp = parse_geo_query_params(st.query_params)
+if _geo_qp is not None:
+    if not st.session_state.get("geo_attempted"):
+        if _geo_qp["status"] == "ok":
+            _apply_detected_location(_geo_qp["latitude"], _geo_qp["longitude"])
+        else:
+            _note_geo_declined(_geo_qp["status"])
+    st.query_params.clear()
+
+# Channel (1): the custom component. request=True only while no detection
+# has been attempted yet, or the visitor just tapped "Use my location".
+_geo_want_request = (not st.session_state.get("geo_attempted")) or bool(st.session_state.get("geo_request"))
+_geo_result = _geo_component(
+    request=_geo_want_request,
+    request_id=int(st.session_state.get("geo_request_id", 0)),
+    key="earthwise_geolocation",
+    default=None,
+)
+if isinstance(_geo_result, dict) and not st.session_state.get("geo_attempted"):
+    if _geo_result.get("status") == "ok" and _geo_result.get("latitude") is not None:
+        _apply_detected_location(_geo_result["latitude"], _geo_result["longitude"])
+    elif _geo_result.get("status") in ("denied", "timeout", "unavailable"):
+        _note_geo_declined(_geo_result["status"])
+
 # ---------- Sidebar: navigation + controls ----------
 PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
 with st.sidebar:
@@ -230,7 +339,8 @@ with st.sidebar:
         st.warning("No matching city. Showing all cities — try another spelling or region.")
         city_options = sorted(REGIONS)
     default_city = "Lahore" if "Lahore" in city_options else city_options[0]
-    city = st.selectbox("City", city_options, index=city_options.index(default_city))
+    city = st.selectbox("City", city_options, index=city_options.index(default_city),
+                        key="City", on_change=_on_sidebar_city_change)
     st.caption(f"{REGIONS[city]['province']} · {REGIONS[city]['latitude']:.4f}° N, {REGIONS[city]['longitude']:.4f}° E")
     st.caption(f"Directory: {len(REGIONS)} mapped urban centres · PBS Census 2023 records 657 urban localities nationally.")
     st.divider()
@@ -256,6 +366,13 @@ with st.sidebar:
     if not commercial_api_configured():
         st.caption("Prototype mode: free Open-Meteo endpoint only. Set OPEN_METEO_API_KEY for commercial use.")
 
+# A manual city change drops the exact-position override — the detected
+# coordinates belong to the detected city, not the newly picked one.
+_geo = st.session_state.get("geo")
+if _geo and _geo.get("city") != city:
+    st.session_state["geo"] = None
+    _geo = None
+
 # ---------- Top navigation — visible on mobile, where the sidebar is hidden ----------
 # Plain buttons (not a second stateful widget): a tap stores the target page
 # in "_nav_target" and reruns; the keyed sidebar radio adopts it on the
@@ -271,6 +388,39 @@ for _nav_row in (PAGES[:4], PAGES[4:]):
                          use_container_width=True):
                 st.session_state["_nav_target"] = _nav_page
                 st.rerun()
+
+# ---------- Location bar — visible on mobile, no sidebar needed ----------
+# The sidebar city picker is hidden on phones, so the same controls live
+# here in the main content: a city search + picker synced with the sidebar
+# (on_change callbacks above keep the two in sync), and the "Use my
+# location" button. Detection state comes from the geo block above.
+_loc_c1, _loc_c2, _loc_c3 = st.columns([3, 2, 2])
+with _loc_c1:
+    _main_search = st.text_input("Find a city", placeholder="Search by city name…", key="city_search_main")
+with _loc_c2:
+    _main_options = sorted(REGIONS)
+    if _main_search.strip():
+        _main_options = [c for c in _main_options if _main_search.casefold() in c.casefold()]
+    if not _main_options or city not in _main_options:
+        _main_options = sorted(REGIONS)
+    st.selectbox("City", _main_options, index=_main_options.index(city),
+                 key="city_main", on_change=_on_main_city_change, label_visibility="collapsed")
+with _loc_c3:
+    if _geo:
+        st.button("✕  Change", key="geo_change", use_container_width=True, on_click=_clear_geo)
+    else:
+        st.button("📍  Use my location", key="geo_use", type="primary", use_container_width=True, on_click=_request_geo)
+if _geo:
+    _geo_label = _geo.get("locality") or _geo["city"]
+    if _geo["method"] == "reverse-geocode":
+        st.caption(f"📍 Detected near: {_geo_label} · live weather uses your exact position ({_geo['latitude']:.4f}° N, {_geo['longitude']:.4f}° E)")
+    else:
+        st.caption(f"📍 Nearest city in our catalogue: {_geo['city']} ({_geo['distance_km']:.0f} km away) · live weather uses your exact position ({_geo['latitude']:.4f}° N, {_geo['longitude']:.4f}° E)")
+else:
+    _geo_note = st.session_state.get("geo_note")
+    if _geo_note:
+        st.caption(_geo_note)
+    st.caption("Your location stays in this browser session — used only to pick your city and fetch its weather (Open-Meteo / CAMS). It is never stored, uploaded or shared.")
 
 # ---------- Fetch climate data ----------
 if fetch:
@@ -319,6 +469,10 @@ if df is None and demo_is_default(city, variable) and not st.session_state.get("
 
 # ---------- Live data (real, cached by the src modules) ----------
 lat, lon = REGIONS[city]["latitude"], REGIONS[city]["longitude"]
+if _geo and _geo.get("city") == city:
+    # Live weather/AQI use the exact detected position, not the city centre.
+    # Climate history (NASA POWER) still uses the matched catalogue city.
+    lat, lon = _geo["latitude"], _geo["longitude"]
 with st.spinner("Loading live weather and air quality…"):
     weather = safe(lambda: get_current_conditions(lat, lon, city), "Current conditions")
     forecast = safe(lambda: get_weather_forecast(lat, lon), "7-day forecast")
