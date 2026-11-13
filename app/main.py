@@ -282,6 +282,125 @@ hr{border-color:rgba(151,190,214,.12)}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-top{gap:8px}.ew-live{font-size:.62rem}.stTabs [data-baseweb="tab"]{padding:0 9px;font-size:.76rem}}
 
 footer{visibility:hidden}
+
+/* Responsive product UI — Linear-inspired restraint, adapted to EARTHWISE brand.
+   Desktop: quiet chrome and compact controls. Mobile: touch-sized controls and scroll-safe views. */
+:root{
+  --ew-control:#142432;
+  --ew-control-hover:#1b3040;
+  --ew-control-border:rgba(169,195,211,.20);
+  --ew-control-text:#e8f1f6;
+  --ew-action:#79dfd0;
+  --ew-action-ink:#06201f;
+}
+.stButton>button,
+.stDownloadButton>button,
+[data-testid="stLinkButton"] a{
+  min-height:42px;
+  padding:0 15px;
+  border-radius:9px!important;
+  border:1px solid var(--ew-control-border)!important;
+  background:var(--ew-control)!important;
+  color:var(--ew-control-text)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  font-size:.84rem!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease!important;
+}
+.stButton>button:hover,
+.stDownloadButton>button:hover,
+[data-testid="stLinkButton"] a:hover{
+  background:var(--ew-control-hover)!important;
+  border-color:rgba(121,223,208,.42)!important;
+  color:#f5fffd!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.16)!important;
+  transform:translateY(-1px);
+}
+.stButton>button[kind="primary"],
+.stButton>button[data-testid="stBaseButton-primary"]{
+  background:var(--ew-action)!important;
+  border-color:rgba(121,223,208,.78)!important;
+  color:var(--ew-action-ink)!important;
+  box-shadow:0 3px 12px rgba(65,190,174,.13)!important;
+}
+.stButton>button[kind="primary"]:hover,
+.stButton>button[data-testid="stBaseButton-primary"]:hover{
+  background:#98eee1!important;
+  border-color:#b1fff2!important;
+  color:#041b19!important;
+  box-shadow:0 7px 20px rgba(65,190,174,.20)!important;
+}
+.stButton>button:active,
+.stDownloadButton>button:active,
+[data-testid="stLinkButton"] a:active{transform:translateY(0) scale(.985)}
+.stButton>button:focus-visible,
+.stDownloadButton>button:focus-visible,
+[data-testid="stLinkButton"] a:focus-visible{
+  outline:2px solid #8cebdd!important;
+  outline-offset:3px!important;
+}
+.stButton>button:disabled,
+.stDownloadButton>button:disabled{opacity:.48!important;cursor:not-allowed!important;transform:none!important}
+.stTabs [data-baseweb="tab-list"]{
+  overflow-x:auto;
+  flex-wrap:nowrap;
+  scrollbar-width:thin;
+  overscroll-behavior-x:contain;
+}
+.stTabs [data-baseweb="tab"]{white-space:nowrap;flex:0 0 auto}
+[data-testid="stPlotlyChart"],[data-testid="stDataFrame"],[data-testid="stTable"]{max-width:100%}
+[data-testid="stDataFrame"]{overflow-x:auto}
+@media (min-width:1100px){
+  .block-container{padding-top:1.35rem}
+  .ew-hero{margin-bottom:24px}
+  .ew-section{margin-top:1.8rem}
+}
+@media (max-width:900px){
+  [data-testid="stSidebar"]{min-width:260px!important;max-width:260px!important}
+  .block-container{padding-left:1.25rem;padding-right:1.25rem}
+  div[data-testid="stMetric"]{min-height:100px}
+}
+@media (max-width:700px){
+  .block-container{padding:.8rem .72rem 1.6rem!important}
+  .ew-top{align-items:flex-start;flex-direction:column;gap:9px;margin-bottom:13px;padding-bottom:10px}
+  .ew-brand{font-size:.76rem;letter-spacing:.11em;line-height:1.6}
+  .ew-live{font-size:.59rem;padding:6px 9px}
+  .ew-hero{padding:22px 18px!important;border-radius:16px!important;margin-bottom:15px}
+  .ew-hero:before{right:-235px;opacity:.55}
+  .ew-hero:after{display:none}
+  .ew-title{font-size:clamp(2rem,9vw,2.65rem)!important;line-height:1.04!important;letter-spacing:-.055em!important}
+  .ew-sub{font-size:.87rem;line-height:1.58}
+  .ew-hero-foot{gap:6px;margin-top:16px}
+  .ew-chip{font-size:.58rem;padding:6px 8px}
+  .ew-section{font-size:1rem;margin:1.2rem 0 .65rem}
+  .stButton>button,.stDownloadButton>button,[data-testid="stLinkButton"] a{
+    min-height:44px!important;
+    width:100%;
+    padding:0 12px!important;
+    font-size:.82rem!important;
+  }
+  .stTabs [data-baseweb="tab-list"]{gap:4px;padding:4px}
+  .stTabs [data-baseweb="tab"]{height:39px;padding:0 10px;font-size:.72rem}
+  div[data-testid="stMetric"]{min-height:88px;padding:12px!important;border-radius:13px}
+  div[data-testid="stMetricValue"]{font-size:1.42rem!important}
+  div[data-testid="stMetricLabel"] p{font-size:.7rem!important}
+  .ew-forecast-card{min-height:170px;padding:12px 10px}
+  [data-testid="stSidebar"]{min-width:0!important;max-width:min(88vw,340px)!important;width:min(88vw,340px)!important}
+  [data-testid="stSidebar"] .stButton>button,
+  [data-testid="stSidebar"] [data-testid="stLinkButton"] a{width:100%}
+  [data-testid="stPlotlyChart"]{overflow:hidden}
+}
+@media (max-width:390px){
+  .block-container{padding-left:.55rem!important;padding-right:.55rem!important}
+  .ew-title{font-size:1.88rem!important}
+  .ew-chip{font-size:.54rem}
+  .stTabs [data-baseweb="tab"]{padding:0 8px;font-size:.68rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .stButton>button,.stDownloadButton>button,[data-testid="stLinkButton"] a{transition:none!important}
+}
+
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
