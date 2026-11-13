@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 from src.regions import REGIONS, VARIABLES
 from src.nasa_power import fetch_daily
 from src.cleaning import monthly_aggregate, coverage_summary
+from src.climate_fingerprint import build_climate_fingerprint
 from src.statistics import analyze_trend
 from src.ai_engine import explain_result
 from src.live_weather import get_current_conditions, commercial_api_configured
@@ -105,9 +106,11 @@ def render_globe(selected_city: str):
           .pointColor(d=>d.name===selected?'#ffd36a':'#6ce7f4')
           .pointAltitude(.018).pointRadius(.12).pointResolution(12)
           .pointLabel(d=>'<b>'+d.name+'</b><br>'+d.province)
-          .width(el.clientWidth).height(520);
-        globe.pointOfView({lat:29.5,lng:69.5,altitude:2.05},1200);
-        globe.controls().autoRotate=true;globe.controls().autoRotateSpeed=.22;
+          .width(el.clientWidth).height(el.clientWidth<560?390:520);
+        globe.pointOfView({lat:29.5,lng:69.5,altitude:2.05},900);
+        // Keep the globe still until the visitor interacts; continuous rotation
+        // wastes GPU/battery on mobile and can make the workspace feel busy.
+        globe.controls().autoRotate=false;
         globe.controls().enableDamping=true;
         clearTimeout(timer);document.getElementById('load').remove();
         window.addEventListener('resize',()=>globe.width(el.clientWidth));
@@ -119,6 +122,105 @@ def render_globe(selected_city: str):
         "__SELECTED__", json.dumps(selected_city)
     )
     components.html(html, height=540, scrolling=False)
+
+
+
+def render_pakistan_map(selected_city: str):
+    """Google-Maps-style interactive map with province and division outlines."""
+    points = [
+        {"name": name, "lat": info["latitude"], "lng": info["longitude"],
+         "province": info["province"]}
+        for name, info in REGIONS.items()
+    ]
+    html = """<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+      html,body,#map{height:100%;margin:0;background:#071522;color:#eaf8ff}
+      .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0b1d2d;color:#eaf8ff}
+      .leaflet-tooltip{background:#0b1d2d;border:1px solid #4c8198;color:#eaf8ff;box-shadow:none;font-weight:700}
+      .leaflet-control-layers{background:#0b1d2d;color:#eaf8ff;border:1px solid #34546b}
+      .leaflet-control-zoom a{background:#0b1d2d;color:#eaf8ff;border-color:#34546b}
+      .map-status{position:absolute;z-index:500;top:12px;left:50px;background:rgba(7,22,36,.92);color:#c9eaf4;padding:8px 12px;border:1px solid #31566e;border-radius:9px;font:12px Arial;max-width:72%}
+      #fallback{padding:24px;font:14px Arial,sans-serif}
+    </style></head><body>
+    <div id="map"><div id="fallback">Loading interactive Pakistan map…</div></div>
+    <div class="map-status" id="map-status">Province outlines · City locations · Zoom to explore</div>
+    <script>
+    const points=__POINTS__, selected=__SELECTED__, mapEl=document.getElementById('map');
+    const fail=(message)=>{mapEl.innerHTML='<div id="fallback">'+message+'</div>';};
+    const css=document.querySelector('link');css.onerror=()=>fail('Map styles could not load. Check your connection and retry.');
+    const js=document.createElement('script');js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.onerror=()=>fail('Interactive map could not load. Check your connection and retry.');
+    js.onload=async()=>{
+      try{
+        mapEl.innerHTML='';
+        const selectedPoint=points.find(p=>p.name===selected);
+        const map=L.map('map',{zoomControl:true,scrollWheelZoom:true}).setView(
+          selectedPoint?[selectedPoint.lat,selectedPoint.lng]:[29.5,69.5], selectedPoint?7:5
+        );
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+          maxZoom:18,attribution:'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+        const cityLayer=L.featureGroup();
+        points.forEach(p=>{
+          const chosen=p.name===selected;
+          const marker=L.circleMarker([p.lat,p.lng],{
+            radius:chosen?8:5,color:chosen?'#ffe08a':'#e8fbff',
+            weight:chosen?3:1.5,fillColor:chosen?'#ffb84d':'#16a9c9',fillOpacity:.95
+          }).bindPopup('<b>'+p.name+'</b><br>'+p.province+'<br><small>'+p.lat.toFixed(3)+', '+p.lng.toFixed(3)+'</small>');
+          marker.bindTooltip(p.name,{direction:'top',offset:[0,-7]});
+          marker.addTo(cityLayer);
+        });
+        cityLayer.addTo(map);
+        const overlays={'Mapped cities':cityLayer};
+        const layerControl=L.control.layers(null,overlays,{collapsed:true}).addTo(map);
+        const provinceUrl='https://raw.githubusercontent.com/PakData/GISData/master/PAK-GeoJSON/PAK_adm1.json';
+        const divisionUrl='https://raw.githubusercontent.com/PakData/GISData/master/PAK-GeoJSON/PAK_adm2.json';
+        const [provinceResponse,divisionResponse]=await Promise.all([fetch(provinceUrl),fetch(divisionUrl)]);
+        if(!provinceResponse.ok||!divisionResponse.ok) throw new Error('Boundary data unavailable');
+        const [provinceGeo,divisionGeo]=await Promise.all([provinceResponse.json(),divisionResponse.json()]);
+        const provinceLayer=L.geoJSON(provinceGeo,{
+          style:{color:'#6ce5ed',weight:2.5,opacity:.95,fillColor:'#2b9cb0',fillOpacity:.055},
+          onEachFeature:(feature,layer)=>{
+            const name=feature.properties.NAME_1||'Province / region';
+            layer.bindTooltip(name,{sticky:true,direction:'center'});
+            layer.bindPopup('<b>'+name+'</b><br>Pakistan administrative boundary');
+          }
+        }).addTo(map);
+        const divisionLayer=L.geoJSON(divisionGeo,{
+          style:{color:'#e8c879',weight:1.15,opacity:.78,fillOpacity:0},
+          onEachFeature:(feature,layer)=>{
+            const name=feature.properties.NAME_2||'Division';
+            const province=feature.properties.NAME_1||'';
+            layer.bindTooltip(name,{sticky:true,direction:'center'});
+            layer.bindPopup('<b>'+name+'</b><br>'+province+'<br><small>Administrative division boundary</small>');
+          }
+        });
+        overlays['Province / region boundaries']=provinceLayer;
+        overlays['Division boundaries']=divisionLayer;
+        layerControl.addOverlay(provinceLayer,'Province / region boundaries');
+        layerControl.addOverlay(divisionLayer,'Division boundaries');
+        map.on('zoomend',()=>{
+          if(map.getZoom()>=7){if(!map.hasLayer(divisionLayer))map.addLayer(divisionLayer);}
+          else if(map.hasLayer(divisionLayer))map.removeLayer(divisionLayer);
+        });
+        if(selectedPoint){
+          L.circle([selectedPoint.lat,selectedPoint.lng],{
+            radius:45000,color:'#ffcf70',weight:1,opacity:.8,fillOpacity:0,dashArray:'5 7'
+          }).addTo(map);
+        }
+        L.control.scale({imperial:false}).addTo(map);
+        document.getElementById('map-status').textContent=
+          'Selected: '+(selectedPoint?selectedPoint.name:'Pakistan')+' · Tap a province or city · Scroll / +/- to zoom';
+        setTimeout(()=>map.invalidateSize(),250);
+      }catch(e){document.getElementById('map-status').textContent='Boundary overlays unavailable — base map may still be used.';}
+    };
+    document.head.appendChild(js);
+    </script></body></html>"""
+    html = html.replace("__POINTS__", json.dumps(points)).replace(
+        "__SELECTED__", json.dumps(selected_city)
+    )
+    components.html(html, height=640, scrolling=False)
 
 
 def render_satellite_map(imagery_date):
@@ -227,6 +329,41 @@ div.stButton>button:hover,div.stDownloadButton>button:hover{transform:translateY
 [data-testid="stChatMessage"]{background:rgba(12,29,46,.72);border:1px solid var(--line);border-radius:14px}
 [data-testid="stChatInput"]{border-color:rgba(103,220,235,.28)}
 .ew-footer{color:#718da3;font-size:.67rem;letter-spacing:.07em;text-align:center;padding:20px 0 5px}
+/* EARTHWISE signature system — deep-ocean base, living-green accents */
+:root{--ew-ink:#06111d;--ew-surface:#0b1c2b;--ew-surface-raised:#102638;--ew-green:#74d6a0;--ew-text:#eff8fb;--ew-muted:#9ab3c3}
+.stApp{background:radial-gradient(ellipse at 82% 4%,rgba(38,154,133,.13),transparent 29%),radial-gradient(ellipse at 8% 38%,rgba(37,111,159,.12),transparent 34%),linear-gradient(145deg,#050d17 0%,#081725 52%,#071522 100%)}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#0b1d2b 0%,#081522 58%,#07121d 100%);border-right:1px solid rgba(112,185,194,.18)}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2{letter-spacing:-.04em;font-size:1.24rem}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"]{color:#86a7b8;letter-spacing:.035em}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label{min-height:42px;display:flex;align-items:center;border-radius:11px;padding:8px 12px;margin:3px 0;border:1px solid transparent;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:hover{background:rgba(93,202,184,.075);border-color:rgba(116,214,160,.16);transform:translateX(2px)}
+[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:linear-gradient(100deg,rgba(48,151,142,.22),rgba(42,112,147,.12));border-color:rgba(116,214,160,.34);box-shadow:inset 3px 0 0 #74d6a0,0 6px 18px rgba(0,0,0,.12)}
+.ew-hero{border-color:rgba(112,205,184,.24);background:radial-gradient(circle at 88% 18%,rgba(72,189,160,.15),transparent 30%),linear-gradient(112deg,rgba(12,43,57,.98),rgba(8,27,43,.97) 62%,rgba(8,39,43,.92));box-shadow:0 18px 55px rgba(0,0,0,.18)}
+.ew-eyebrow{color:#86e2bd}
+.ew-chip{border-color:rgba(116,214,160,.22);background:rgba(9,38,43,.55);color:#c3f0dd}
+.ew-status{border-color:rgba(116,214,160,.28);background:rgba(23,91,73,.2);color:#b8efd3}
+.ew-card{border-color:rgba(130,190,207,.18);background:linear-gradient(145deg,rgba(15,39,55,.94),rgba(8,25,40,.96));box-shadow:0 12px 32px rgba(0,0,0,.15)}
+.ew-card:hover{border-color:rgba(116,214,160,.34);box-shadow:0 16px 36px rgba(0,0,0,.2),0 0 0 1px rgba(116,214,160,.05)}
+.ew-section:before{background:linear-gradient(180deg,#83e2b2,#4bbbc8);box-shadow:0 0 14px rgba(116,214,160,.22)}
+.ew-ai-banner{border-color:rgba(116,214,160,.27);background:linear-gradient(115deg,rgba(13,66,63,.5),rgba(10,29,46,.96) 68%)}
+.ew-ai-kicker{color:#8ce3b9}
+.ew-empty{border-color:rgba(116,214,160,.28);background:linear-gradient(145deg,rgba(12,43,51,.48),rgba(8,25,40,.55))}
+.ew-empty-icon{color:#8ce3b9}
+.stButton>button,[data-testid="stDownloadButton"]>button{border-radius:10px;border:1px solid rgba(116,214,160,.34);background:linear-gradient(110deg,#176c62,#155a72);color:#f2fffb;font-weight:700;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease;box-shadow:0 7px 20px rgba(12,95,87,.16)}
+.stButton>button:hover,[data-testid="stDownloadButton"]>button:hover{border-color:rgba(143,235,190,.7);filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 10px 25px rgba(20,126,105,.22)}
+.stButton>button:focus-visible,button:focus-visible{outline:2px solid #8ce3b9!important;outline-offset:3px!important}
+[data-baseweb="select"]>div,[data-baseweb="input"]>div,[data-testid="stDateInput"] input,[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{border-color:rgba(130,190,207,.23)!important;border-radius:10px!important;background-color:rgba(8,25,40,.76)!important}
+[data-baseweb="select"]>div:focus-within,[data-baseweb="input"]>div:focus-within{border-color:rgba(116,214,160,.65)!important;box-shadow:0 0 0 2px rgba(116,214,160,.1)!important}
+div[data-testid="stMetric"]{border:1px solid rgba(130,190,207,.16);border-radius:14px;padding:15px 16px;background:linear-gradient(145deg,rgba(15,39,55,.9),rgba(8,25,40,.94))}
+div[data-testid="stMetric"] label{color:#a8c2d0!important}
+div[data-testid="stMetric"] [data-testid="stMetricValue"]{color:#f2fbff!important;font-family:'Space Grotesk',sans-serif}
+[data-testid="stDataFrame"],[data-testid="stTable"]{border:1px solid rgba(130,190,207,.18);border-radius:12px;overflow:hidden}
+[data-testid="stExpander"]{border:1px solid rgba(130,190,207,.17);border-radius:12px;background:rgba(9,27,42,.48)}
+[data-testid="stTabs"] button[role="tab"]{border-radius:9px 9px 0 0;font-weight:600}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{color:#9ce7c2;border-bottom-color:#74d6a0}
+hr{border-color:rgba(130,190,207,.14)!important}
+a{color:#83dfc0!important}
+@media(max-width:700px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{border-radius:16px}.ew-status{white-space:normal;line-height:1.5}div[data-testid="stMetric"]{padding:11px}}
 footer{visibility:hidden}
 @media(max-width:700px){.block-container{padding:1rem .8rem 2rem}.ew-title{font-size:2.15rem}.ew-hero{padding:23px 19px}.ew-top{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -267,6 +404,115 @@ div[data-testid="stMetricValue"]{font-size:1.65rem}
 .ew-footer{border-top:1px solid rgba(153,194,219,.10);line-height:1.9}
 @media(max-width:850px){.ew-hero{grid-template-columns:1fr}.ew-hero-aside{max-width:280px}.ew-status{font-size:.58rem}}
 @media(max-width:560px){[data-testid="stSidebar"]{min-width:unset!important}.ew-hero{padding:23px 19px}.ew-hero-aside{width:100%;max-width:none}.ew-title{font-size:2.05rem}}
+
+/* GLASSMORPHIC PRODUCT LAYER — restrained, readable, consistent */
+:root{
+ --glass-bg:rgba(14,34,50,.56);
+ --glass-bg-strong:rgba(10,27,42,.78);
+ --glass-edge:rgba(173,218,226,.19);
+ --glass-edge-active:rgba(116,214,160,.43);
+ --glass-shadow:0 18px 48px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.045);
+ --glass-blur:blur(18px) saturate(135%);
+}
+.stApp{background-attachment:fixed}
+[data-testid="stHeader"]{background:rgba(5,14,23,.48)!important;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid rgba(173,218,226,.08)}
+[data-testid="stSidebar"]{background:linear-gradient(160deg,rgba(12,32,47,.88),rgba(5,17,29,.91))!important;backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border-right:1px solid var(--glass-edge)!important;box-shadow:12px 0 40px rgba(0,0,0,.12)}
+.block-container{padding-top:1.55rem}
+.ew-hero,.ew-card,.ew-ai-banner,.ew-empty,
+div[data-testid="stMetric"],[data-testid="stExpander"],
+[data-testid="stChatMessage"],[data-testid="stDataFrame"],
+[data-testid="stTable"]{
+ background:linear-gradient(145deg,rgba(20,48,65,.62),rgba(8,25,40,.72))!important;
+ border:1px solid var(--glass-edge)!important;
+ box-shadow:var(--glass-shadow);
+ backdrop-filter:var(--glass-blur);
+ -webkit-backdrop-filter:var(--glass-blur);
+}
+.ew-hero{border-radius:24px!important;position:relative}
+.ew-card{border-radius:18px!important;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.ew-card:hover{transform:translateY(-3px);border-color:var(--glass-edge-active)!important;box-shadow:0 22px 48px rgba(0,0,0,.27),0 0 24px rgba(83,196,164,.07)}
+.ew-ai-banner{border-radius:19px!important}
+.ew-empty{border-radius:20px!important}
+div[data-testid="stMetric"]{border-radius:16px!important;min-height:112px}
+[data-testid="stExpander"]{border-radius:14px!important;overflow:hidden}
+[data-testid="stChatMessage"]{border-radius:16px!important;margin-bottom:10px}
+[data-testid="stDataFrame"],[data-testid="stTable"]{border-radius:14px!important;overflow:hidden}
+[data-testid="stTabs"] [role="tablist"]{gap:7px;border-bottom:1px solid rgba(173,218,226,.12)}
+[data-testid="stTabs"] button[role="tab"]{padding:10px 15px;border:1px solid transparent;border-radius:11px 11px 0 0;transition:background .18s ease,border-color .18s ease}
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"]{background:rgba(78,164,143,.12);border-color:rgba(116,214,160,.22);color:#b9f0d2!important}
+[data-testid="stRadio"] div[role="radiogroup"]{gap:7px}
+[data-testid="stRadio"] div[role="radiogroup"] label{border-radius:11px;transition:background .18s ease,border-color .18s ease}
+[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked){background:rgba(65,153,130,.14);border:1px solid rgba(116,214,160,.27)}
+[data-baseweb="select"]>div,[data-baseweb="input"]>div,
+[data-testid="stDateInput"] input,[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,[data-testid="stChatInput"] textarea{
+ background:rgba(5,19,32,.56)!important;
+ border:1px solid rgba(173,218,226,.2)!important;
+ border-radius:12px!important;
+ box-shadow:inset 0 1px 3px rgba(0,0,0,.12);
+ transition:border-color .18s ease,box-shadow .18s ease;
+}
+[data-baseweb="select"]>div:focus-within,[data-baseweb="input"]>div:focus-within,
+[data-testid="stDateInput"] input:focus,[data-testid="stTextInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus{
+ border-color:var(--glass-edge-active)!important;
+ box-shadow:0 0 0 3px rgba(116,214,160,.10)!important;
+}
+.stButton>button,[data-testid="stDownloadButton"]>button,
+[data-testid="stFormSubmitButton"]>button{
+ min-height:42px;border-radius:12px!important;
+ border:1px solid rgba(129,222,181,.35)!important;
+ background:linear-gradient(115deg,rgba(25,116,99,.96),rgba(22,88,111,.96))!important;
+ color:#f3fff9!important;font-weight:700!important;letter-spacing:.012em;
+ box-shadow:0 7px 20px rgba(5,74,67,.2),inset 0 1px 0 rgba(255,255,255,.12)!important;
+ transition:transform .18s ease,filter .18s ease,box-shadow .18s ease!important;
+}
+.stButton>button:hover,[data-testid="stDownloadButton"]>button:hover,
+[data-testid="stFormSubmitButton"]>button:hover{
+ transform:translateY(-2px);filter:brightness(1.12);
+ box-shadow:0 12px 27px rgba(13,115,93,.26),inset 0 1px 0 rgba(255,255,255,.15)!important;
+}
+.stButton>button:active,[data-testid="stDownloadButton"]>button:active,
+[data-testid="stFormSubmitButton"]>button:active{transform:translateY(0) scale(.985)}
+.stButton>button:focus-visible,[data-testid="stDownloadButton"]>button:focus-visible,
+[data-testid="stFormSubmitButton"]>button:focus-visible{outline:2px solid #a4f0c5!important;outline-offset:3px!important}
+button:disabled{opacity:.48!important;filter:saturate(.55)}
+[data-testid="stProgress"]>div>div{background:linear-gradient(90deg,#4dbbba,#83e2b2)!important}
+[data-testid="stAlert"]{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:14px!important}
+::selection{background:rgba(100,215,177,.28);color:#fff}
+@media(max-width:700px){
+ .block-container{padding-left:1rem;padding-right:1rem}
+ .ew-hero,.ew-card,.ew-ai-banner{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+ div[data-testid="stMetric"]{min-height:unset}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+
+/* Performance guardrails: keep large data surfaces crisp and inexpensive to composite. */
+[data-testid="stDataFrame"],[data-testid="stTable"]{
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
+}
+[data-testid="stMetric"],[data-testid="stExpander"],[data-testid="stChatMessage"]{
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.stButton>button,[data-testid="stDownloadButton"]>button,[data-testid="stFormSubmitButton"]>button{
+ min-height:44px;white-space:normal;line-height:1.25;
+}
+.stButton>button:focus-visible,[data-testid="stDownloadButton"]>button:focus-visible,
+[data-testid="stFormSubmitButton"]>button:focus-visible{
+ outline:2px solid #a4f0c5!important;outline-offset:3px!important;
+}
+@media(max-width:700px){
+ [data-testid="stDataFrame"],[data-testid="stTable"]{border-radius:10px}
+ .stButton>button,[data-testid="stDownloadButton"]>button{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .ew-card:hover,.stButton>button:hover{transform:none!important}
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -363,6 +609,14 @@ except Exception:
 ai_context = build_ai_context(
     city, variable, start_year, end_year, weather, monthly, trend
 )
+
+# Keep the assistant transcript aligned with the evidence currently on screen.
+# A conversation started for another city/indicator/period must not silently
+# carry over into a new analytical context.
+ai_context_signature = (city, variable, int(start_year), int(end_year))
+if st.session_state.get("ai_context_signature") != ai_context_signature:
+    st.session_state.ai_messages = []
+    st.session_state.ai_context_signature = ai_context_signature
 
 # ---------------------------------------------------------------------
 # Shared header
@@ -479,6 +733,51 @@ elif page == "Climate Intelligence":
         )
         st.plotly_chart(chart, use_container_width=True, config={"displaylogo": False, "responsive": True})
         st.caption("Monthly precipitation is summed; all other indicators are monthly means.")
+
+        # A seasonality-aware fingerprint: compare each month only with that
+        # calendar month's historical distribution for this selected record.
+        st.markdown('<div class="ew-section">Pakistan Climate Fingerprint</div>', unsafe_allow_html=True)
+        fingerprint = build_climate_fingerprint(monthly, variable)
+        if not fingerprint.empty:
+            years_covered = len(fingerprint.index)
+            st.markdown(
+                '<div class="ew-muted">A year-by-month climate signature. Each cell shows how unusual that month was '
+                'relative to the same calendar month across the selected record, in standard deviations. '
+                'This highlights unusual seasonal departures without confusing summer and winter.</div>',
+                unsafe_allow_html=True,
+            )
+            fingerprint_fig = px.imshow(
+                fingerprint,
+                color_continuous_scale="RdBu_r",
+                color_continuous_midpoint=0,
+                zmin=-2,
+                zmax=2,
+                aspect="auto",
+                labels={"x": "Calendar month", "y": "Year", "color": "Anomaly (σ)"},
+            )
+            fingerprint_fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(7,20,34,.25)",
+                font=dict(family="DM Sans", color="#b7cbd9"),
+                margin=dict(l=8, r=8, t=12, b=8),
+                height=max(260, min(560, 110 + years_covered * 22)),
+                coloraxis_colorbar=dict(title="σ", thickness=12, len=.82),
+            )
+            fingerprint_fig.update_xaxes(side="top", showgrid=False)
+            fingerprint_fig.update_yaxes(autorange="reversed", showgrid=False)
+            st.plotly_chart(
+                fingerprint_fig,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True},
+            )
+            st.caption(
+                "Method: calendar-month z-scores from the selected NASA POWER record. "
+                "At least three valid years are required; constant or undersampled months are left blank. "
+                "This is an exploratory anomaly view, not an official climate-normal or attribution product."
+            )
+        else:
+            st.info("Climate Fingerprint needs at least three years of valid monthly observations.")
+
         st.markdown('<div class="ew-section">Trend assessment</div>', unsafe_allow_html=True)
         if trend and trend.get("status") == "ok":
             t1, t2, t3, t4 = st.columns(4)
@@ -519,12 +818,20 @@ elif page == "AI Earth Scientist":
     st.markdown('<div class="ew-ai-banner"><div class="ew-ai-kicker">EARTHWISE AI · CONVERSATIONAL INTELLIGENCE</div><div class="ew-ai-title">Meet your AI Earth Scientist</div><div class="ew-ai-copy">Ask questions about climate, environmental signals, the selected city, or your retrieved dataset. Answers are instructed to distinguish evidence from uncertainty.</div></div>', unsafe_allow_html=True)
     st.caption(f"Active context: {city}, {REGIONS[city]['province']} · {VARIABLES[variable]['label']} · {start_year}–{end_year}")
     if not assistant_configured():
-        st.warning("Conversational AI is not connected yet. Add your own OpenAI API key to the app's private Secrets to activate it.")
-        st.code('OPENAI_API_KEY = "your-openai-api-key"\nOPENAI_MODEL = "gpt-4.1-mini"', language="toml")
+        st.warning("Conversational AI is not connected yet. Add Neon AI Gateway credentials or an OpenAI fallback key in the app's private Secrets.")
+        st.code(
+            'NEON_AI_GATEWAY_BASE_URL = "https://YOUR-BRANCH-api.ai.YOUR-REGION.aws.neon.tech"\n'
+            'NEON_AI_GATEWAY_TOKEN = "your-neon-scoped-credential"\n'
+            'NEON_AI_MODEL = "gpt-5-mini"\n\n'
+            '# Optional direct OpenAI fallback\n'
+            'OPENAI_API_KEY = "your-openai-api-key"\n'
+            'OPENAI_MODEL = "gpt-4.1-mini"',
+            language="toml",
+        )
         st.markdown("[OpenAI API platform](https://platform.openai.com/api-keys) · [API billing](https://platform.openai.com/settings/organization/billing)")
-        st.caption("Never paste your API key into this chat or commit it to GitHub. Add it only in Streamlit Cloud → App settings → Secrets.")
+        st.caption("Never paste credentials into chat or commit them to GitHub. Add them only in Streamlit Cloud → App settings → Secrets.")
     else:
-        st.success("AI engine connected · Your API key is stored server-side in app Secrets.")
+        st.success("AI engine configured · Provider credentials are read server-side from app Secrets.")
     for message in st.session_state.ai_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -556,10 +863,14 @@ elif page == "AI Earth Scientist":
 # ---------------------------------------------------------------------
 elif page == "Earth Explorer":
     st.markdown('<div class="ew-section">Earth Explorer</div>', unsafe_allow_html=True)
-    view = st.radio("Explore", ["3D Earth", "NASA satellite imagery", "Pakistan city atlas"], horizontal=True)
+    view = st.radio("Explore", ["3D Earth", "Pakistan interactive map", "NASA satellite imagery", "Pakistan city atlas"], horizontal=True)
     if view == "3D Earth":
-        st.caption("Interactive textured Earth with mapped Pakistan urban centres. The texture is a visual basemap, not live satellite video.")
+        st.caption("Interactive 3D Earth with mapped Pakistan urban centres. Drag to rotate and scroll to zoom. The texture is a visual basemap, not live satellite video.")
         render_globe(city)
+    elif view == "Pakistan interactive map":
+        st.caption("Map-style navigation with zoom, searchable visual landmarks, province/region outlines and division boundaries. Choose a city in the sidebar to centre the map.")
+        render_pakistan_map(city)
+        st.caption("Map tiles © OpenStreetMap contributors. Administrative outlines: PakData GISData (GADM-derived). Boundaries are reference geography, not a legal cadastral survey.")
     elif view == "NASA satellite imagery":
         imagery_date = st.date_input(
             "Imagery date", value=date.today() - timedelta(days=3),
@@ -626,6 +937,7 @@ elif page == "Data Library":
                 st.session_state.workspace_token = recovery_key.strip()
                 st.session_state.pop("pending_user_upload", None)
                 st.session_state.pop("saved_dataset_preview", None)
+                st.session_state.pop("selected_saved_dataset_id", None)
                 st.success("Workspace key accepted.")
                 st.rerun()
             else:
