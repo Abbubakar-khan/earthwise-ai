@@ -409,3 +409,20 @@ def test_assistant_example_has_no_literal_markdown_markers(geo_app):
     assert bubbles, "assistant example/chat bubbles missing"
     assert all("**" not in b for b in bubbles)
     assert any("<b>" in b for b in bubbles)  # the example answer's bold survived as HTML
+
+
+def test_daily_advisory_page_renders_all_three(geo_app):
+    """The Daily Advisory page (2026-11-14) shows the health verdict, the
+    farmer advisory and the rain warning from the faked live data, and the
+    Overview teaser button opens the page."""
+    at = geo_app()
+    assert at.button(key="adv_open") is not None
+    at.button(key="adv_open").click().run()
+    assert not at.exception
+    assert at.session_state["page"] == "Daily Advisory"
+    text = _all_text(at)
+    assert "health verdict" in text.lower()
+    assert "Farmer advisory" in text
+    assert "Rain warning" in text
+    assert "not medical advice" in text
+    assert "not an official warning" in text
