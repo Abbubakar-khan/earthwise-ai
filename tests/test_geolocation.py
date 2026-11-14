@@ -427,3 +427,46 @@ def test_daily_advisory_page_renders_all_three(geo_app):
     assert "Rain warning" in text
     assert "not medical advice" in text
     assert "not an official warning" in text
+def test_daily_advisory_body_sections_render(monkeypatch):
+    """Heart & body strain graph + best hours (2026-11-14): the Daily
+    Advisory page shows the 24h strain curve (with the honesty note that
+    this is an ESTIMATE, not a measured heartbeat — no sensor is
+    connected) and the best hours outdoors, from the faked live data."""
+    def _forecast_with_hours(lat, lon):
+        base = _fake_forecast(lat, lon)
+        hours = [f"2026-11-14T{h:02d}:00" for h in range(24)]
+        temps = [16.0, 15.0, 14.0, 14.0, 14.0, 15.0, 17.0, 19.0, 22.0, 25.0,
+                 27.0, 29.0, 30.0, 31.0, 31.0, 30.0, 28.0, 25.0, 22.0, 20.0,
+                 19.0, 18.0, 17.0, 16.0]
+        base["hourly"] = {
+            "time": hours, "temperature_2m": temps,
+            "precipitation_probability": [0] * 24, "precipitation": [0.0] * 24,
+            "weather_code": [0] * 24, "wind_speed_10m": [5.0] * 24,
+        }
+        return base
+
+    monkeypatch.setattr("src.live_weather.get_current_conditions", _FakeCached(_fake_current))
+    monkeypatch.setattr("src.live_weather.get_weather_forecast", _FakeCached(_forecast_with_hours))
+    monkeypatch.setattr("src.air_quality.get_air_quality", _FakeCached(_fake_aqi))
+    monkeypatch.setattr("src.geolocation.reverse_geocode", lambda lat, lon: "Lahore")
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.run()
+    assert not at.exception, f"app raised: {at.exception}"
+    at.button(key="nav_Daily Advisory").click().run()
+    assert not at.exception
+    assert at.session_state["page"] == "Daily Advisory"
+    text = _all_text(at)
+    assert "Heart & body" in text
+    assert "Best hours today" in text
+    assert "not a measured heartbeat" in text.lower()
+    assert "no smartwatch" in text.lower()
+    # The 24h strain curve is rendered as a Plotly chart.
+    charts = at.get("plotly_chart")
+    assert any(getattr(c, "key", None) == "body_strain_chart" for c in charts), \
+        "body strain chart missing on Daily Advisory"
+    # Hottest hours of the fake day (30–31 C) tie at strain 3; max() takes
+    # the first, 12:00. ("13:00" was the first draft's guess — 30 C already
+    # scores 3, so 12:00 is the peak, not 13:00.)
+    assert "12:00" in text
+    # Best hours are the cool morning hours of the fake day.
+    assert "06:00" in text
