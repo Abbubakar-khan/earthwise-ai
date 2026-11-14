@@ -26,6 +26,7 @@ from src.live_weather import get_current_conditions, get_weather_forecast, get_n
 from src.air_quality import get_air_quality
 from src.risk import compute_risk, project_trend
 from src.ai_assistant import answer_question
+from src.advisory import advisory_summary, daily_health_verdict, farmer_advisory, rain_warning
 from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, ticker_html, weather_animation_class
 from src.geolocation import (
     GEO_QUERY_LAT, GEO_QUERY_LON, GEO_QUERY_STATUS,
@@ -332,7 +333,7 @@ if isinstance(_geo_result, dict) and not st.session_state.get("geo_attempted"):
         _note_geo_declined(_geo_result["status"])
 
 # ---------- Sidebar: navigation + controls ----------
-PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
+PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps", "Daily Advisory", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
 with st.sidebar:
     st.markdown("## 🌍 EARTHWISE AI")
     st.caption("PAKISTAN EARTH INTELLIGENCE · FORGE CYBER LAB")
@@ -391,7 +392,7 @@ if _geo and _geo.get("city") != city:
 # in "_nav_target" and reruns; the keyed sidebar radio adopts it on the
 # next run (see above), so the two always agree and the keyed-radio fix is
 # untouched. Active page is highlighted with the primary button style.
-# Two rows (4 + 3) so the buttons stay tap-friendly on a phone screen.
+# Two rows (4 + 4) so the buttons stay tap-friendly on a phone screen.
 for _nav_row in (PAGES[:4], PAGES[4:]):
     _nav_cols = st.columns(len(_nav_row))
     for _nav_col, _nav_page in zip(_nav_cols, _nav_row):
@@ -592,6 +593,17 @@ if page == "Overview":
         if risk and risk.get("composite") is not None:
             kpi("Risk screening", f"{risk['composite']}/100 · {risk['composite_label']}", "Screening only — not an official warning.", delay_ms=240)
         else: kpi("Risk screening", "—", "Needs climate data + live weather / AQI.", delay_ms=240)
+    _adv = advisory_summary(weather, aqi, forecast)
+    if _adv:
+        _adv_bits = []
+        if _adv["health_label"]:
+            _adv_bits.append(f"<b style=\"color:{_adv['health_colour']}\">Today: {_adv['health_label']}</b>")
+        if _adv["rain_label"]:
+            _adv_bits.append(f"Rain this week: <b style=\"color:{_adv['rain_colour']}\">{_adv['rain_label']}</b> ({_adv['rain_total_mm']:.0f} mm)")
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>📌 Today’s advisory</b><span>What today’s air, heat and rain mean for you — plain language, from live data</span></div><p style="color:#e8f1f5;font-size:.95rem;margin:12px 0 0">{" · ".join(_adv_bits) if _adv_bits else "Advisory unavailable right now."}</p></div>', unsafe_allow_html=True)
+        if st.button("Open Daily Advisory →", key="adv_open", type="primary", use_container_width=True):
+            st.session_state["_nav_target"] = "Daily Advisory"
+            st.rerun()
     section("Live now", f"{city} · {REGIONS[city]['province']} · Model-based conditions, cached 15 min · Air quality cached 30 min")
     a, b = st.columns(2)
     with a:
@@ -920,6 +932,37 @@ elif page == "Risk & Outlook":
         st.write("- **Heat now:** live model temperature bands (30 / 35 / 40 / 45 °C).")
         st.write("- **Air quality:** live US AQI / 3, from CAMS via Open-Meteo.")
         st.write("- **Composite:** mean of the available signals. Screening only.")
+
+# ================= DAILY ADVISORY =================
+elif page == "Daily Advisory":
+    section(f"Daily Advisory — {city}", "Three plain-language advisories from today's live data · What the numbers mean for your health, your fields and your travel")
+    _health = daily_health_verdict(weather, aqi)
+    if _health.get("status") == "ok":
+        _factors = " · ".join(_health["factors"]) if _health["factors"] else "—"
+        _actions = "".join(f"<li>{html.escape(a)}</li>" for a in _health["actions"])
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>🏥 Today’s health verdict — {html.escape(_health["label"])}</b><span>Score {_health["score"]}/10 · From live AQI, heat and humidity</span></div><p style="color:#e8f1f5;font-size:.95rem;margin:12px 0 0">{html.escape(_factors)}</p><ul style="color:#e8f1f5">{_actions}</ul></div>', unsafe_allow_html=True)
+        st.caption("General guidance only — not medical advice. If you feel unwell, seek medical help.")
+    else:
+        st.info("Health verdict unavailable — live weather and air quality could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    _farm = farmer_advisory(forecast)
+    if _farm.get("status") == "ok":
+        _farm_items = "".join(f"<li><b>{html.escape(it['title'])}</b> — {html.escape(it['detail'])}</li>" for it in _farm["items"])
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>🌾 Farmer advisory</b><span>{html.escape(_farm["summary"])}</span></div><ul style="color:#e8f1f5">{_farm_items}</ul></div>', unsafe_allow_html=True)
+        st.caption("General planning guidance from the 7-day model forecast — confirm with your local agriculture department for crop-specific decisions.")
+    else:
+        st.info("Farmer advisory unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    _rain = rain_warning(forecast)
+    if _rain.get("status") == "ok":
+        _rain_days = "".join(
+            "<li>" + d["date"] + ": "
+            + (f"{d['rain_mm']:.0f}" if d["rain_mm"] is not None else "—")
+            + " mm — " + d["label"] + "</li>"
+            for d in _rain["days"])
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>🌧️ Rain warning — {html.escape(_rain["label"])}</b><span>{_rain["total_mm"]:.0f} mm expected this week · Worst day {_rain["worst_day"]} ({_rain["worst_mm"]:.0f} mm)</span></div><p style="color:#e8f1f5;font-size:.95rem;margin:12px 0 0">{html.escape(_rain["advice"])}</p><ul style="color:#e8f1f5">{_rain_days}</ul></div>', unsafe_allow_html=True)
+        st.caption("Model forecast screening, not an official warning — Pakistan Meteorological Department (PMD) issues official warnings.")
+    else:
+        st.info("Rain warning unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    st.markdown('<div class="ew-foot">EARTHWISE AI · PAKISTAN-FIRST EARTH INTELLIGENCE<br><strong>Created by Muhammad Abbubakar</strong> · Founder<br>Advisories are screening guidance from model data, not official warnings</div>', unsafe_allow_html=True)
 
 # ================= DATA & DOWNLOADS =================
 elif page == "Data & Downloads":
