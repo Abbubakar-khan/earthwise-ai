@@ -388,23 +388,33 @@ INTRO_CSS = """
 /* --- Opening intro splash: full-screen, CSS only, fades out --- */
 @keyframes introGlobeSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes introOrbit{from{transform:rotate(0deg) translateX(74px) rotate(0deg)}to{transform:rotate(360deg) translateX(74px) rotate(-360deg)}}
+@keyframes introRing{0%{transform:scale(.85);opacity:.55}100%{transform:scale(1.35);opacity:0}}
 @keyframes introRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-@keyframes introFlyIn{0%{opacity:0;transform:translateY(-56px) scale(.92)}60%{opacity:1;transform:translateY(5px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes introFlyIn{0%{opacity:0;transform:translateY(-56px) scale(.92)}55%{opacity:1;transform:translateY(4px) scale(1.03)}75%{transform:translateY(-1px) scale(1)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes introTitleGlow{0%,100%{text-shadow:0 0 0 rgba(126,232,214,0)}50%{text-shadow:0 0 28px rgba(126,232,214,.5)}}
 @keyframes introBar{from{width:4%}to{width:100%}}
+@keyframes introStage{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:translateY(0)}70%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
+@keyframes introStageLast{0%{opacity:0;transform:translateY(6px)}20%{opacity:1;transform:translateY(0)}100%{opacity:1;transform:translateY(0)}}
 @keyframes introGlow{0%,100%{box-shadow:0 0 0 0 rgba(126,232,214,.35)}50%{box-shadow:0 0 44px 6px rgba(126,232,214,.28)}}
 @keyframes introFadeOut{to{opacity:0;visibility:hidden}}
-.ew-intro{position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(900px 500px at 50% 18%,rgba(64,190,220,.22),transparent 62%),radial-gradient(700px 420px at 50% 110%,rgba(126,232,214,.14),transparent 60%),#060f18;color:#eef6f9;animation:introFadeOut .6s ease 3.1s forwards}
+.ew-intro{position:fixed;inset:0;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(900px 500px at 50% 18%,rgba(64,190,220,.22),transparent 62%),radial-gradient(700px 420px at 50% 110%,rgba(126,232,214,.14),transparent 60%),#060f18;color:#eef6f9;animation:introFadeOut .5s ease 2.5s forwards}
 .ew-intro-globe{position:relative;width:148px;height:148px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 34% 30%,#1d4a63,#0b1d2d 68%);border:1px solid rgba(126,232,214,.35);animation:introGlow 2.2s ease-in-out infinite}
+.ew-intro-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(126,232,214,.5);animation:introRing 1.6s ease-out infinite;pointer-events:none}
 .ew-intro-globe .ew-intro-earth{font-size:4.4rem;line-height:1;animation:introGlobeSpin 9s linear infinite}
 .ew-intro-orbit{position:absolute;top:50%;left:50%;width:0;height:0}
 .ew-intro-orbit i{position:absolute;top:-5px;left:-5px;width:10px;height:10px;border-radius:50%;background:#7ee8d6;box-shadow:0 0 12px #7ee8d6;animation:introOrbit 2.4s linear infinite}
-.ew-intro-title{margin-top:30px;font:700 clamp(2rem,6vw,3.1rem)/1.05 'Space Grotesk',sans-serif;letter-spacing:.06em}
-.ew-intro-letter{display:inline-block;animation:introFlyIn .55s cubic-bezier(.2,.7,.3,1) backwards}
+.ew-intro-title{margin-top:30px;font:700 clamp(2rem,6vw,3.1rem)/1.05 'Space Grotesk',sans-serif;letter-spacing:.06em;animation:introTitleGlow 2.2s ease-in-out infinite}
+.ew-intro-letter{display:inline-block;animation:introFlyIn .55s cubic-bezier(.17,1.36,.32,1) backwards}
 .ew-intro-title .ew-intro-ai{color:#7ee8d6}
 .ew-intro-tag{margin-top:12px;color:#b0c2ce;font-size:.92rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;animation:introRise .7s .35s cubic-bezier(.2,.7,.3,1) backwards}
 .ew-intro-sub{margin-top:10px;color:#8299a8;font-size:.8rem;animation:introRise .7s .5s cubic-bezier(.2,.7,.3,1) backwards}
+.ew-intro-stages{position:relative;height:1.3em;margin-top:14px}
+.ew-intro-stage{position:absolute;inset:0;color:#9db2c0;font-size:.8rem;font-weight:600;letter-spacing:.04em;opacity:0;animation:introStage .8s ease forwards}
+.ew-intro-stage:nth-child(1){animation-delay:.2s}
+.ew-intro-stage:nth-child(2){animation-delay:.95s}
+.ew-intro-stage:nth-child(3){animation:introStageLast .8s ease forwards;animation-delay:1.7s}
 .ew-intro-bar{width:min(280px,72vw);height:4px;margin-top:30px;border-radius:999px;background:rgba(164,193,211,.18);overflow:hidden;animation:introRise .7s .6s backwards}
-.ew-intro-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#35cce8,#7ee8d6);animation:introBar 2.5s ease forwards}
+.ew-intro-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#35cce8,#7ee8d6);animation:introBar 2.3s ease forwards}
 .ew-intro-src{margin-top:16px;color:#6d8594;font-size:.68rem;letter-spacing:.14em;animation:introRise .7s .7s backwards}
 @media(prefers-reduced-motion:reduce){.ew-intro *{animation-duration:.01ms!important;animation-delay:0ms!important}}
 """
@@ -432,11 +442,16 @@ def intro_html() -> str:
     it only brands the app and names its real live sources."""
     return (
         '<div class="ew-intro" role="status" aria-label="EarthWise AI loading">'
-        '<div class="ew-intro-globe"><span class="ew-intro-earth">🌍</span>'
+        '<div class="ew-intro-globe"><span class="ew-intro-ring"></span><span class="ew-intro-earth">🌍</span>'
         '<span class="ew-intro-orbit"><i></i></span></div>'
         '<div class="ew-intro-title">' + _intro_title_html() + "</div>"
         '<div class="ew-intro-tag">Pakistan Earth Intelligence</div>'
         '<div class="ew-intro-sub">Climate · Weather · Air Quality — live, for every city</div>'
+        '<div class="ew-intro-stages">'
+        '<span class="ew-intro-stage">Connecting to NASA POWER…</span>'
+        '<span class="ew-intro-stage">Fetching live weather…</span>'
+        '<span class="ew-intro-stage">Loading 10-year climate history…</span>'
+        "</div>"
         '<div class="ew-intro-bar"><i></i></div>'
         '<div class="ew-intro-src">NASA POWER &nbsp;·&nbsp; OPEN-METEO &nbsp;·&nbsp; CAMS &nbsp;·&nbsp; NASA GIBS</div>'
         "</div>"
@@ -446,6 +461,11 @@ def intro_html() -> str:
 # --- Professional design fix (2026-11-14): header clearance, hero layout,
 # stat tiles that never truncate, forecast grid, designed empty states. ---
 DESIGN_CSS = """
+/* --- Design tokens: one radius, one shadow, one spacing rhythm ---
+   Every card, tile, button and chart in the app draws from these tokens,
+   so the interface looks designed as one system instead of assembled
+   from one-off values. */
+:root{--r-sm:10px;--r-md:14px;--r-lg:18px;--r-xl:20px;--sh-sm:0 4px 14px rgba(0,0,0,.18);--sh-md:0 10px 28px rgba(0,0,0,.22);--sh-lg:0 18px 40px rgba(0,0,0,.25);--sp-1:6px;--sp-2:10px;--sp-3:16px;--sp-4:24px;--sp-5:32px}
 /* Header clears the Streamlit toolbar; brand is bright, not grey-on-navy */
 .block-container{padding-top:3.4rem!important}
 [data-testid="stHeader"]{background:#060f18!important}
@@ -454,27 +474,30 @@ DESIGN_CSS = """
 .ew-brand-sub{color:#b0c2ce;font-weight:500}
 /* Hero: two-column, live panel fills the right half — no dead space */
 .ew-hero{display:flex;gap:28px;align-items:center;justify-content:space-between}
+.ew-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#35cce8,#7ee8d6,transparent);pointer-events:none}
+.ew-grad{background:linear-gradient(90deg,#35cce8,#7ee8d6);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ew-hero-left{flex:1;min-width:0}
-.ew-hero-right{flex:0 0 240px;text-align:center;padding:6px 4px;border-left:1px solid rgba(164,193,211,.14)}
+.ew-hero-right{flex:0 0 240px;text-align:center;padding:6px 4px;border-left:1px solid rgba(164,193,211,.14);background:radial-gradient(closest-side,rgba(126,232,214,.10),transparent 72%);border-radius:var(--r-md)}
 .ew-hero-right .wx-hero-symbol{position:static;font-size:3.8rem;display:block;margin-bottom:2px}
-.ew-now-temp{font:700 3.1rem/1 'Space Grotesk',sans-serif;letter-spacing:-.04em;color:#eef6f9}
+.ew-now-temp{font:700 3.1rem/1 'Space Grotesk',sans-serif;letter-spacing:-.04em;color:#eef6f9;font-variant-numeric:tabular-nums}
 .ew-now-cond{color:#cfe8ef;font-size:.86rem;font-weight:600;margin-top:6px}
 .ew-now-stats{color:#9db2c0;font-size:.72rem;margin-top:8px;line-height:1.6}
 /* Compact stat tiles — values wrap, never truncate ("6.1 km/h" fits) */
-.ew-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.ew-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-2);margin-top:12px}
 .ew-stats.cols-3{grid-template-columns:repeat(3,1fr)}
-.ew-stat{padding:12px 10px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.02)}
+.ew-stat{padding:12px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:rgba(255,255,255,.02);transition:border-color .15s,transform .15s}
+.ew-stat:hover{border-color:rgba(126,232,214,.35)}
 .ew-stat-label{color:#9db2c0;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.ew-stat-value{font:600 1.05rem 'Space Grotesk',sans-serif;color:#eef6f9;margin-top:5px;white-space:normal;overflow-wrap:break-word}
-.ew-card-head b{font-size:.95rem}
+.ew-stat-value{font:600 1.05rem 'Space Grotesk',sans-serif;color:#eef6f9;margin-top:5px;white-space:normal;overflow-wrap:break-word;font-variant-numeric:tabular-nums}
+.ew-card-head b{font-size:1rem;font-weight:700;letter-spacing:-.01em}
 .ew-card-head span{display:block;color:#9db2c0;font-size:.76rem;margin-top:3px}
 .ew-card-foot{color:#9db2c0;font-size:.74rem;margin-top:12px;line-height:1.6}
 .ew-live-card{display:flex;flex-direction:column}
 .ew-live-card .ew-stats{flex:1}
 /* Forecast: one clean strip — 7 cols desktop, 4 tablet, 2 mobile */
-.ew-forecast-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:8px 0 16px}
-.ew-fc{padding:14px 12px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,var(--surface2),var(--surface));min-height:168px}
-.ew-fc:hover{border-color:rgba(126,232,214,.35)}
+.ew-forecast-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:var(--sp-2);margin:8px 0 16px}
+.ew-fc{padding:14px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:linear-gradient(180deg,var(--surface2),var(--surface));min-height:168px;transition:border-color .15s,transform .15s,box-shadow .15s}
+.ew-fc:hover{border-color:rgba(126,232,214,.35);transform:translateY(-2px);box-shadow:var(--sh-sm)}
 .ew-fc-day{color:#9db2c0;font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
 .ew-fc-sym{font-size:1.5rem;margin:10px 0 4px}
 .ew-fc-cond{font-size:.8rem;font-weight:600;color:#e8f1f5;min-height:2.1em;line-height:1.25}
@@ -484,11 +507,24 @@ DESIGN_CSS = """
 @media(max-width:1100px){.ew-forecast-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:700px){.ew-forecast-grid{grid-template-columns:repeat(2,1fr)}.ew-stats{grid-template-columns:repeat(2,1fr)}.ew-hero{flex-direction:column;align-items:flex-start}.ew-hero-right{flex:none;width:100%;text-align:left;border-left:none;border-top:1px solid rgba(164,193,211,.14);padding-top:14px}.block-container{padding:2.8rem .75rem 1.8rem!important}}
 /* Designed empty state — a card with steps, not a bare blue notice */
-.ew-empty{padding:24px 22px;border:1px dashed rgba(126,232,214,.4);border-radius:16px;background:linear-gradient(135deg,rgba(16,42,61,.85),rgba(9,24,36,.85));margin:10px 0 14px}
+.ew-empty{padding:24px 22px;border:1px dashed rgba(126,232,214,.4);border-radius:var(--r-lg);background:linear-gradient(135deg,rgba(16,42,61,.85),rgba(9,24,36,.85));margin:10px 0 14px}
 .ew-empty h3{margin:0 0 8px;font-size:1.05rem}
 .ew-empty p{color:#b0c2ce;font-size:.85rem;line-height:1.7;margin:0 0 6px}
 .ew-empty .ew-step{color:#e8f1f5;font-size:.82rem;font-weight:600;margin-top:10px}
-.ew-assistant-cap{padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.ew-assistant-cap{padding:16px 18px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);transition:border-color .15s,transform .15s,box-shadow .15s}
+.ew-assistant-cap:hover{border-color:rgba(126,232,214,.28);transform:translateY(-2px);box-shadow:var(--sh-sm)}
 .ew-assistant-cap b{color:#7ee8d6;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase}
 .ew-assistant-cap ul{margin:8px 0 0;padding-left:18px;color:#b0c2ce;font-size:.82rem;line-height:1.8}
+/* Climate story + data provenance cards (same token rhythm as .card) */
+.ew-story{border-left:3px solid var(--accent)}
+.ew-story p{color:#e8f1f5;font-size:.95rem;line-height:1.7;margin:12px 0 0}
+.ew-story .ew-story-detail{color:#9db2c0;font-size:.82rem;margin-top:8px}
+.ew-prov-row{padding:14px 0;border-top:1px solid var(--border)}
+.ew-prov-row:first-of-type{border-top:none}
+.ew-prov-src{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ew-prov-what{color:#e8f1f5;font-size:.88rem;font-weight:600;margin-top:6px}
+.ew-prov-detail{color:#9db2c0;font-size:.82rem;line-height:1.6;margin-top:4px}
+.ew-prov-docs{margin-top:6px}
+.ew-prov-docs a{color:var(--accent);font-size:.78rem;font-weight:600;text-decoration:none}
+.ew-prov-docs a:hover{text-decoration:underline}
 """
