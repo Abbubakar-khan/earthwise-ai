@@ -1,8 +1,10 @@
 """Pakistan city catalogue and NASA POWER climate variables.
 
 Coordinates are approximate city-centre points for gridded NASA POWER extraction.
-The catalogue covers major urban centres; it is not a substitute for the PBS
-2023 master list of all 657 urban localities.
+The catalogue covers 172 cities and towns across Pakistan — every province,
+Gilgit-Baltistan and Azad Jammu & Kashmir. It is not a substitute for the
+PBS 2023 master list of all 657 urban localities; coordinates are
+approximate, not surveyed points.
 """
 REGIONS = {
     # Islamabad Capital Territory
@@ -47,6 +49,32 @@ REGIONS = {
     "Khushab": {"latitude": 32.2967, "longitude": 72.3525, "province": "Punjab"},
     "Muridke": {"latitude": 31.8020, "longitude": 74.2550, "province": "Punjab"},
     "Kamoke": {"latitude": 31.9753, "longitude": 74.2230, "province": "Punjab"},
+    "Taxila": {"latitude": 33.7460, "longitude": 72.8390, "province": "Punjab"},
+    "Murree": {"latitude": 33.9070, "longitude": 73.3910, "province": "Punjab"},
+    "Gojra": {"latitude": 31.1500, "longitude": 72.6830, "province": "Punjab"},
+    "Jaranwala": {"latitude": 31.3340, "longitude": 73.4190, "province": "Punjab"},
+    "Burewala": {"latitude": 30.1660, "longitude": 72.6770, "province": "Punjab"},
+    "Arifwala": {"latitude": 30.2970, "longitude": 73.0650, "province": "Punjab"},
+    "Chichawatni": {"latitude": 30.5330, "longitude": 72.6970, "province": "Punjab"},
+    "Haroonabad": {"latitude": 29.6140, "longitude": 73.1380, "province": "Punjab"},
+    "Sadiqabad": {"latitude": 28.3060, "longitude": 70.1300, "province": "Punjab"},
+    "Kot Addu": {"latitude": 30.4700, "longitude": 70.9640, "province": "Punjab"},
+    "Taunsa": {"latitude": 30.7080, "longitude": 70.6570, "province": "Punjab"},
+    "Daska": {"latitude": 32.3290, "longitude": 74.3510, "province": "Punjab"},
+    "Pasrur": {"latitude": 32.2630, "longitude": 74.6590, "province": "Punjab"},
+    "Shakargarh": {"latitude": 32.2630, "longitude": 75.1580, "province": "Punjab"},
+    "Talagang": {"latitude": 32.9260, "longitude": 72.4150, "province": "Punjab"},
+    "Gujar Khan": {"latitude": 33.2580, "longitude": 73.2970, "province": "Punjab"},
+    "Kahuta": {"latitude": 33.5830, "longitude": 73.3830, "province": "Punjab"},
+    "Sohawa": {"latitude": 33.1250, "longitude": 73.4250, "province": "Punjab"},
+    "Khewra": {"latitude": 32.6500, "longitude": 73.0170, "province": "Punjab"},
+    "Jalalpur Jattan": {"latitude": 32.6470, "longitude": 74.2100, "province": "Punjab"},
+    "Sambrial": {"latitude": 32.4750, "longitude": 74.3550, "province": "Punjab"},
+    "Shorkot": {"latitude": 30.8130, "longitude": 72.2400, "province": "Punjab"},
+    "Kabirwala": {"latitude": 30.4050, "longitude": 71.8640, "province": "Punjab"},
+    "Hasilpur": {"latitude": 29.6930, "longitude": 72.5540, "province": "Punjab"},
+    "Ahmedpur East": {"latitude": 29.1430, "longitude": 71.2570, "province": "Punjab"},
+    "Dunyapur": {"latitude": 29.8040, "longitude": 71.7310, "province": "Punjab"},
     # Sindh
     "Karachi": {"latitude": 24.8607, "longitude": 67.0011, "province": "Sindh"},
     "Hyderabad": {"latitude": 25.3960, "longitude": 68.3578, "province": "Sindh"},
@@ -65,6 +93,18 @@ REGIONS = {
     "Ghotki": {"latitude": 28.0060, "longitude": 69.3161, "province": "Sindh"},
     "Kashmore": {"latitude": 28.4326, "longitude": 69.5836, "province": "Sindh"},
     "Kotri": {"latitude": 25.3650, "longitude": 68.3083, "province": "Sindh"},
+    "Sanghar": {"latitude": 26.0460, "longitude": 68.9480, "province": "Sindh"},
+    "Tando Adam": {"latitude": 25.7610, "longitude": 68.6620, "province": "Sindh"},
+    "Shahdadpur": {"latitude": 25.9270, "longitude": 68.6210, "province": "Sindh"},
+    "Naushahro Feroze": {"latitude": 26.8440, "longitude": 68.1230, "province": "Sindh"},
+    "Moro": {"latitude": 26.6640, "longitude": 68.0000, "province": "Sindh"},
+    "Sehwan": {"latitude": 26.4220, "longitude": 67.8610, "province": "Sindh"},
+    "Kandhkot": {"latitude": 28.2360, "longitude": 69.1820, "province": "Sindh"},
+    "Ratodero": {"latitude": 27.8010, "longitude": 68.2900, "province": "Sindh"},
+    "Tando Muhammad Khan": {"latitude": 25.1230, "longitude": 68.5310, "province": "Sindh"},
+    "Sujawal": {"latitude": 24.6010, "longitude": 68.2420, "province": "Sindh"},
+    "Kunri": {"latitude": 25.1750, "longitude": 69.5590, "province": "Sindh"},
+    "Digri": {"latitude": 25.1550, "longitude": 69.1200, "province": "Sindh"},
     # Khyber Pakhtunkhwa
     "Peshawar": {"latitude": 34.0151, "longitude": 71.5249, "province": "Khyber Pakhtunkhwa"},
     "Mardan": {"latitude": 34.1989, "longitude": 72.0231, "province": "Khyber Pakhtunkhwa"},
@@ -84,6 +124,19 @@ REGIONS = {
     "Chitral": {"latitude": 35.8518, "longitude": 71.7864, "province": "Khyber Pakhtunkhwa"},
     "Timergara": {"latitude": 34.8266, "longitude": 71.8442, "province": "Khyber Pakhtunkhwa"},
     "Batkhela": {"latitude": 34.6178, "longitude": 71.9724, "province": "Khyber Pakhtunkhwa"},
+    "Hangu": {"latitude": 33.5310, "longitude": 71.0560, "province": "Khyber Pakhtunkhwa"},
+    "Parachinar": {"latitude": 33.8960, "longitude": 70.1010, "province": "Khyber Pakhtunkhwa"},
+    "Wana": {"latitude": 32.3040, "longitude": 69.5870, "province": "Khyber Pakhtunkhwa"},
+    "Miranshah": {"latitude": 33.0000, "longitude": 70.0660, "province": "Khyber Pakhtunkhwa"},
+    "Landi Kotal": {"latitude": 34.0980, "longitude": 71.1450, "province": "Khyber Pakhtunkhwa"},
+    "Jamrud": {"latitude": 34.0040, "longitude": 71.3760, "province": "Khyber Pakhtunkhwa"},
+    "Shabqadar": {"latitude": 34.2240, "longitude": 71.5560, "province": "Khyber Pakhtunkhwa"},
+    "Topi": {"latitude": 34.0670, "longitude": 72.6170, "province": "Khyber Pakhtunkhwa"},
+    "Battagram": {"latitude": 34.6790, "longitude": 73.0250, "province": "Khyber Pakhtunkhwa"},
+    "Balakot": {"latitude": 34.5510, "longitude": 73.3490, "province": "Khyber Pakhtunkhwa"},
+    "Havelian": {"latitude": 34.0540, "longitude": 73.1580, "province": "Khyber Pakhtunkhwa"},
+    "Dir": {"latitude": 35.2050, "longitude": 71.8750, "province": "Khyber Pakhtunkhwa"},
+    "Drosh": {"latitude": 35.5620, "longitude": 71.7920, "province": "Khyber Pakhtunkhwa"},
     # Balochistan
     "Quetta": {"latitude": 30.1798, "longitude": 66.9750, "province": "Balochistan"},
     "Turbat": {"latitude": 26.0012, "longitude": 63.0485, "province": "Balochistan"},
@@ -99,6 +152,22 @@ REGIONS = {
     "Nushki": {"latitude": 29.5522, "longitude": 66.0215, "province": "Balochistan"},
     "Kalat": {"latitude": 29.0266, "longitude": 66.5900, "province": "Balochistan"},
     "Pasni": {"latitude": 25.2630, "longitude": 63.4710, "province": "Balochistan"},
+    "Mastung": {"latitude": 29.7980, "longitude": 66.8450, "province": "Balochistan"},
+    "Kharan": {"latitude": 28.5830, "longitude": 65.4160, "province": "Balochistan"},
+    "Panjgur": {"latitude": 26.9710, "longitude": 64.0930, "province": "Balochistan"},
+    "Ormara": {"latitude": 25.2100, "longitude": 64.6360, "province": "Balochistan"},
+    "Jiwani": {"latitude": 25.0500, "longitude": 61.7410, "province": "Balochistan"},
+    "Uthal": {"latitude": 25.8080, "longitude": 66.6180, "province": "Balochistan"},
+    "Ziarat": {"latitude": 30.3820, "longitude": 66.7240, "province": "Balochistan"},
+    "Muslim Bagh": {"latitude": 30.8070, "longitude": 66.5750, "province": "Balochistan"},
+    "Qila Saifullah": {"latitude": 30.7000, "longitude": 68.3600, "province": "Balochistan"},
+    "Dalbandin": {"latitude": 28.8830, "longitude": 64.4000, "province": "Balochistan"},
+    "Dera Bugti": {"latitude": 29.0330, "longitude": 69.1500, "province": "Balochistan"},
+    "Kohlu": {"latitude": 29.8930, "longitude": 69.2500, "province": "Balochistan"},
+    "Harnai": {"latitude": 30.1030, "longitude": 67.9380, "province": "Balochistan"},
+    "Bela": {"latitude": 26.2240, "longitude": 66.3130, "province": "Balochistan"},
+    "Dera Allah Yar": {"latitude": 28.3670, "longitude": 68.3500, "province": "Balochistan"},
+    "Usta Muhammad": {"latitude": 28.1800, "longitude": 68.0300, "province": "Balochistan"},
     # Gilgit-Baltistan
     "Gilgit": {"latitude": 35.9208, "longitude": 74.3089, "province": "Gilgit-Baltistan"},
     "Skardu": {"latitude": 35.2971, "longitude": 75.6333, "province": "Gilgit-Baltistan"},
@@ -106,6 +175,8 @@ REGIONS = {
     "Chilas": {"latitude": 35.4206, "longitude": 74.0967, "province": "Gilgit-Baltistan"},
     "Gahkuch": {"latitude": 36.1750, "longitude": 73.7667, "province": "Gilgit-Baltistan"},
     "Astore": {"latitude": 35.3410, "longitude": 74.8560, "province": "Gilgit-Baltistan"},
+    "Khaplu": {"latitude": 35.1590, "longitude": 76.3400, "province": "Gilgit-Baltistan"},
+    "Shigar": {"latitude": 35.4300, "longitude": 75.7400, "province": "Gilgit-Baltistan"},
     # Azad Jammu & Kashmir
     "Muzaffarabad": {"latitude": 34.3700, "longitude": 73.4711, "province": "Azad Jammu & Kashmir"},
     "Mirpur": {"latitude": 33.1483, "longitude": 73.7519, "province": "Azad Jammu & Kashmir"},
@@ -113,6 +184,8 @@ REGIONS = {
     "Rawalakot": {"latitude": 33.8578, "longitude": 73.7604, "province": "Azad Jammu & Kashmir"},
     "Bagh": {"latitude": 33.9811, "longitude": 73.7761, "province": "Azad Jammu & Kashmir"},
     "Bhimber": {"latitude": 32.9747, "longitude": 74.0791, "province": "Azad Jammu & Kashmir"},
+    "Pallandri": {"latitude": 33.7170, "longitude": 73.6860, "province": "Azad Jammu & Kashmir"},
+    "Hattian Bala": {"latitude": 34.1700, "longitude": 73.7400, "province": "Azad Jammu & Kashmir"},
 }
 VARIABLES = {
     "T2M": {"label": "Mean Air Temperature", "unit": "°C", "aggregation": "mean"},
