@@ -16,7 +16,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 PAGES = ["Overview", "Climate Analytics", "Air Quality", "Weather & Maps",
-         "AI Assistant", "Risk & Outlook", "Data & Downloads"]
+         "Daily Advisory", "AI Assistant", "Risk & Outlook", "Data & Downloads"]
 APP = str(Path(__file__).resolve().parents[1] / "app" / "main.py")
 
 
@@ -44,7 +44,7 @@ def test_top_nav_buttons_exist_for_all_pages(app):
     keys = {b.key for b in app.button if b.key is not None}
     for p in PAGES:
         assert f"nav_{p}" in keys, f"missing top-nav button for {p}"
-    assert len([k for k in keys if k.startswith("nav_")]) == 7
+    assert len([k for k in keys if k.startswith("nav_")]) == 8
 
 
 def test_top_nav_buttons_switch_pages_and_radio_follows(app):
