@@ -62,9 +62,10 @@ def test_nearest_region_city():
     assert city == "Lahore" and dist < 1.0
     city, dist = nearest_region_city(KARACHI_LAT, KARACHI_LON)
     assert city == "Karachi" and dist < 1.0
-    # Mid-Atlantic: nearest catalogue city is the westernmost, Gwadar.
+    # Mid-Atlantic: nearest catalogue city is the westernmost, Jiwani
+    # (61.74°E — further west than Gwadar since the 2026-11-14 expansion).
     city, dist = nearest_region_city(0.0, -30.0)
-    assert city == "Gwadar" and dist > 9000
+    assert city == "Jiwani" and dist > 9000
 
 
 # ---------- reverse-geocode parsing ----------
@@ -135,7 +136,7 @@ def test_resolve_detected_location_nearest_when_no_locality():
 
 def test_resolve_detected_location_nearest_when_far_outside():
     r = resolve_detected_location(0.0, -30.0, "Atlantic Ocean")
-    assert r["city"] == "Gwadar" and r["method"] == "nearest"
+    assert r["city"] == "Jiwani" and r["method"] == "nearest"
     assert r["locality"] == "Atlantic Ocean"
     assert r["distance_km"] > LOCALITY_MAX_DISTANCE_KM
 
@@ -317,10 +318,10 @@ def test_geo_denied_falls_back_silently(geo_app):
 def test_geo_outside_pakistan_uses_nearest_city(geo_app):
     at = geo_app({"geo_lat": "0.0", "geo_lon": "-30.0", "geo_status": "ok"},
                  locality="Atlantic Ocean")
-    assert at.session_state["City"] == "Gwadar"
+    assert at.session_state["City"] == "Jiwani"
     geo = at.session_state["geo"]
     assert geo["method"] == "nearest"
-    assert "Nearest city in our catalogue: Gwadar" in _all_text(at)
+    assert "Nearest city in our catalogue: Jiwani" in _all_text(at)
 
 
 def test_main_picker_syncs_sidebar(geo_app):
