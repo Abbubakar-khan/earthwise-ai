@@ -86,3 +86,26 @@ def test_design_css_has_grid_header_and_mobile_rules():
     assert "ew-hero-right" in DESIGN_CSS
     assert "ew-empty" in DESIGN_CSS
     assert "ew-stat-value" in DESIGN_CSS
+
+
+def test_design_tokens_are_one_system_not_one_off_values():
+    """UI polish (2026-11-14): one radius, one shadow, one spacing rhythm —
+    every card/tile/chart draws from the same tokens, and the new story and
+    provenance cards use them too."""
+    for token in ("--r-sm", "--r-md", "--r-lg", "--r-xl",
+                  "--sh-sm", "--sh-md", "--sh-lg",
+                  "--sp-1", "--sp-2", "--sp-3", "--sp-4", "--sp-5"):
+        assert token in DESIGN_CSS, token
+    assert "var(--r-md)" in DESIGN_CSS
+    assert "var(--r-sm)" in DESIGN_CSS
+    assert "var(--sp-2)" in DESIGN_CSS
+    assert "var(--sh-sm)" in DESIGN_CSS
+    # New judge-facing cards use the same tokens.
+    assert ".ew-story" in DESIGN_CSS
+    assert ".ew-prov-row" in DESIGN_CSS
+    # Hero looks designed, not assembled: gradient accent hairline + gradient
+    # text class.
+    assert ".ew-hero::before" in DESIGN_CSS
+    assert ".ew-grad" in DESIGN_CSS
+    # Numbers don't jump: tabular figures on KPI/stat/temp values.
+    assert "font-variant-numeric:tabular-nums" in DESIGN_CSS
