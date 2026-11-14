@@ -99,6 +99,76 @@ def ticker_html(items: list[str]) -> str:
     )
 
 
+def weather_scene_class(code) -> str:
+    """CSS class for the full live-weather scene (same WMO mapping as
+    weather_animation_class)."""
+    return weather_animation_class(code)
+
+
+def live_weather_scene_html(weather) -> str:
+    """A big animated sky that matches the LIVE weather code: spinning sun
+    for clear, drifting clouds, falling rain / snow, flashing lightning,
+    drifting fog. Pure CSS shapes — no images, no new deps. All text
+    (temperature, condition) comes from the real live `weather` dict;
+    returns '' when live weather is unavailable, so the page never shows
+    a scene for weather it does not have.
+    """
+    if not isinstance(weather, dict):
+        return ""
+    temp = _fmt_num(weather.get("temperature_2m"))
+    if temp is None:
+        return ""
+    cls = weather_animation_class(weather.get("weather_code"))
+    condition = str(weather.get("condition_text") or "Live conditions")
+    if cls == "wx-clear":
+        art = ('<div class="wx-scene-sun"><i></i></div>'
+               '<div class="wx-scene-ground">☀️ Clear sky — sunshine all day</div>')
+    elif cls == "wx-partly":
+        art = ('<div class="wx-scene-sun wx-scene-sun-small"><i></i></div>'
+               '<div class="wx-cloud-shape wx-c1"></div>'
+               '<div class="wx-cloud-shape wx-c2"></div>'
+               '<div class="wx-scene-ground">🌤️ Partly cloudy — sun and clouds</div>')
+    elif cls == "wx-cloud":
+        art = ('<div class="wx-cloud-shape wx-c1"></div>'
+               '<div class="wx-cloud-shape wx-c2"></div>'
+               '<div class="wx-cloud-shape wx-c3"></div>'
+               '<div class="wx-scene-ground">☁️ Cloudy — grey sky, no rain yet</div>')
+    elif cls == "wx-rain":
+        drops = "".join(
+            f'<span class="wx-drop" style="left:{8 + i * 11}%;animation-delay:{(i % 5) * 0.18:.2f}s"></span>'
+            for i in range(9))
+        art = ('<div class="wx-cloud-shape wx-c1 wx-dark"></div>'
+               '<div class="wx-cloud-shape wx-c2 wx-dark"></div>' + drops +
+               '<div class="wx-scene-ground">🌧️ Rain — take cover, roads will be wet</div>')
+    elif cls == "wx-snow":
+        flakes = "".join(
+            f'<span class="wx-flake" style="left:{6 + i * 9}%;animation-delay:{(i % 5) * 0.7:.1f}s"></span>'
+            for i in range(10))
+        art = ('<div class="wx-cloud-shape wx-c1"></div>'
+               '<div class="wx-cloud-shape wx-c2"></div>' + flakes +
+               '<div class="wx-scene-ground">❄️ Snow — cold, drive carefully</div>')
+    elif cls == "wx-storm":
+        drops = "".join(
+            f'<span class="wx-drop" style="left:{12 + i * 12}%;animation-delay:{(i % 4) * 0.15:.2f}s"></span>'
+            for i in range(7))
+        art = ('<div class="wx-cloud-shape wx-c1 wx-dark"></div>'
+               '<div class="wx-cloud-shape wx-c2 wx-dark"></div>'
+               '<div class="wx-bolt">⚡</div>' + drops +
+               '<div class="wx-scene-ground">⛈️ Thunderstorm — stay indoors if you can</div>')
+    else:  # wx-fog
+        art = ('<div class="wx-fog-band wx-f1"></div>'
+               '<div class="wx-fog-band wx-f2"></div>'
+               '<div class="wx-fog-band wx-f3"></div>'
+               '<div class="wx-scene-ground">🌫️ Fog — low visibility, drive slowly</div>')
+    return (
+        f'<div class="wx-scene {cls}" role="img" aria-label="{html.escape(condition)}">'
+        + art
+        + f'<div class="wx-scene-label"><span class="wx-scene-temp">{temp}°</span>'
+        f'<span class="wx-scene-cond">{html.escape(condition)}</span></div>'
+        + "</div>"
+    )
+
+
 def hero_symbol_html(code, symbol: str) -> str:
     """Floating weather symbol for the hero. `symbol` is the emoji already
     chosen by main.weather_symbol(); the CSS class animates it by condition.
@@ -275,6 +345,43 @@ ANIMATION_CSS = """
 .stButton>button:active,.stDownloadButton>button:active{transform:scale(.98)}
 .stButton>button:focus-visible,.stDownloadButton>button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:700px){.wx-hero-symbol{font-size:2.1rem;top:14px;right:14px}.ew-ticker-item{font-size:.7rem}.ew-ticker-track{animation-duration:22s}}
+
+/* --- Live weather scene: a full animated sky matched to the live code --- */
+@keyframes wxSunPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes wxCloudDrift{0%{transform:translateX(-16px)}50%{transform:translateX(26px)}100%{transform:translateX(-16px)}}
+@keyframes wxRainFall{0%{transform:translateY(-14px);opacity:0}25%{opacity:1}100%{transform:translateY(120px);opacity:0}}
+@keyframes wxSnowFall{0%{transform:translateY(-10px) translateX(0);opacity:0}20%{opacity:1}100%{transform:translateY(130px) translateX(18px);opacity:0}}
+@keyframes wxBoltFlash{0%,55%,100%{opacity:1}60%,70%{opacity:.15}65%{opacity:.9}}
+@keyframes wxFogDrift{0%,100%{transform:translateX(-24px)}50%{transform:translateX(24px)}}
+.wx-scene{position:relative;height:196px;border-radius:18px;overflow:hidden;border:1px solid var(--border);margin:0 0 16px}
+.wx-scene.wx-clear{background:linear-gradient(180deg,#2f7fc4 0%,#7ec3ee 55%,#bfe6f7 100%)}
+.wx-scene.wx-partly{background:linear-gradient(180deg,#3a86c8 0%,#8fc6ea 60%,#cfe9f6 100%)}
+.wx-scene.wx-cloud{background:linear-gradient(180deg,#5b7a92 0%,#8fa8ba 60%,#b9c9d4 100%)}
+.wx-scene.wx-rain{background:linear-gradient(180deg,#33475c 0%,#54708a 60%,#7d97ab 100%)}
+.wx-scene.wx-snow{background:linear-gradient(180deg,#6d8296 0%,#a9bfd0 60%,#dbe8f2 100%)}
+.wx-scene.wx-storm{background:linear-gradient(180deg,#1d2c3e 0%,#33475c 60%,#5b7288 100%)}
+.wx-scene.wx-fog{background:linear-gradient(180deg,#8fa3b0 0%,#b6c4cd 60%,#d3dde2 100%)}
+.wx-scene-sun{position:absolute;top:26px;left:34px;width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 38% 35%,#fff6c8,#ffd23e 55%,#ffb703);box-shadow:0 0 60px 18px rgba(255,205,60,.5);animation:wxSunPulse 3.2s ease-in-out infinite}
+.wx-scene-sun i{position:absolute;inset:-26px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,220,90,.9) 0 5deg,transparent 5deg 40deg);-webkit-mask:radial-gradient(circle,transparent 62%,#000 63%,#000 78%,transparent 79%);mask:radial-gradient(circle,transparent 62%,#000 63%,#000 78%,transparent 79%);animation:wxSpin 26s linear infinite}
+.wx-scene-sun-small{width:52px;height:52px;top:22px}
+.wx-cloud-shape{position:absolute;width:130px;height:40px;background:#fdfefe;border-radius:999px;opacity:.95;box-shadow:0 8px 22px rgba(10,30,50,.18);animation:wxCloudDrift 9s ease-in-out infinite}
+.wx-cloud-shape::before{content:'';position:absolute;left:22px;top:-22px;width:56px;height:56px;border-radius:50%;background:#fdfefe}
+.wx-cloud-shape::after{content:'';position:absolute;right:20px;top:-14px;width:40px;height:40px;border-radius:50%;background:#fdfefe}
+.wx-cloud-shape.wx-dark{background:#e8eef2;opacity:.9}
+.wx-cloud-shape.wx-dark::before,.wx-cloud-shape.wx-dark::after{background:#e8eef2}
+.wx-c1{top:34px;left:12%}
+.wx-c2{top:74px;left:52%;animation-duration:12s;animation-delay:-3s}
+.wx-c3{top:26px;left:68%;animation-duration:10s;animation-delay:-6s;transform:scale(.8)}
+.wx-drop{position:absolute;top:78px;width:3px;height:18px;border-radius:3px;background:linear-gradient(rgba(190,225,255,.95),rgba(190,225,255,.15));animation:wxRainFall 1.05s linear infinite}
+.wx-flake{position:absolute;top:60px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9);animation:wxSnowFall 4.2s linear infinite}
+.wx-bolt{position:absolute;top:64px;left:46%;font-size:3rem;line-height:1;filter:drop-shadow(0 0 14px #ffe45e);animation:wxBoltFlash 1.7s ease-in-out infinite}
+.wx-fog-band{position:absolute;left:-8%;width:116%;height:26px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(235,242,246,.65),transparent);animation:wxFogDrift 8s ease-in-out infinite}
+.wx-f1{top:52px}.wx-f2{top:96px;animation-duration:11s;animation-delay:-4s}.wx-f3{top:138px;animation-duration:9s;animation-delay:-2s}
+.wx-scene-label{position:absolute;left:18px;bottom:14px;display:flex;align-items:baseline;gap:12px;color:#fff;text-shadow:0 2px 10px rgba(5,20,35,.55)}
+.wx-scene-temp{font:700 2.5rem/1 'Space Grotesk',sans-serif;letter-spacing:-.04em}
+.wx-scene-cond{font-size:.95rem;font-weight:600}
+.wx-scene-ground{position:absolute;right:16px;bottom:14px;max-width:46%;text-align:right;color:rgba(255,255,255,.95);font-size:.8rem;font-weight:600;line-height:1.5;text-shadow:0 2px 8px rgba(5,20,35,.55)}
+@media(max-width:700px){.wx-scene{height:170px}.wx-scene-ground{display:none}.wx-scene-temp{font-size:2rem}}
 """
 
 INTRO_CSS = """
