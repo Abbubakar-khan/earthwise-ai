@@ -6,8 +6,9 @@ US AQI is computed by Open-Meteo from the pollutant concentrations.
 """
 from __future__ import annotations
 
-import requests
 import streamlit as st
+
+from src.live_weather import _get_with_retry
 
 API_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
@@ -61,8 +62,7 @@ def get_air_quality(latitude: float, longitude: float, city: str = "") -> dict:
         "hourly": "pm2_5,pm10,us_aqi",
         "forecast_days": 2, "timezone": "auto",
     }
-    resp = requests.get(API_URL, params=params, timeout=25)
-    resp.raise_for_status()
+    resp = _get_with_retry(API_URL, params=params, timeout=25)
     payload = resp.json()
     current = payload.get("current")
     if not isinstance(current, dict) or current.get("us_aqi") is None and current.get("pm2_5") is None:
