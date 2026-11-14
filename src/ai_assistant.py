@@ -53,7 +53,7 @@ def answer_question(question: str, ctx: dict) -> str:
                     f"(Climate Analytics page). At least 24 monthly observations are needed.")
         return (f"**{city} — {ctx.get('variable_label', 'climate')} trend:** {t.get('direction')}, "
                 f"Sen's slope **{t.get('sen_slope_per_decade'):+.3g} {ctx.get('unit', '')} per decade**, "
-                f"Kendall p-value {t.get('p_value')}, "
+                f"Kendall p-value {_fmt(t.get('p_value'), '', 2)}, "
                 f"{'significant' if t.get('significant_005') else 'not significant'} at 0.05, "
                 f"over {t.get('first_month')} to {t.get('last_month')} ({t.get('n')} months). "
                 f"This is a historical statistical trend, not a forecast, and seasonality/autocorrelation are not corrected in this MVP.")
