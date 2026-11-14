@@ -27,7 +27,9 @@ from src.air_quality import get_air_quality
 from src.risk import compute_risk, project_trend
 from src.ai_assistant import answer_question
 from src.advisory import advisory_summary, daily_health_verdict, farmer_advisory, rain_warning
-from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, ticker_html, weather_animation_class
+from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, live_weather_scene_html, ticker_html, weather_animation_class
+from src.pakistan_map import build_pakistan_map_figure, city_from_selection
+from src.farmer import crop_planting_guide
 from src.geolocation import (
     GEO_QUERY_LAT, GEO_QUERY_LON, GEO_QUERY_STATUS,
     parse_geo_query_params, resolve_detected_location, reverse_geocode,
@@ -226,6 +228,18 @@ def fetch_current_dataset():
 # so the radio adopts the new page and the two always agree.
 if "_nav_target" in st.session_state:
     st.session_state["page"] = st.session_state.pop("_nav_target")
+
+# Map tap / map picker target: a marker tap on the Pakistan map (or the
+# "Load this place" button) stores the target city here and reruns.
+# It is applied BEFORE the sidebar City widget is created — assigning
+# session_state["City"] after that widget exists raises
+# StreamlitWidgetAlreadyInstantiatedError in the same run.
+if "_map_city_target" in st.session_state:
+    _map_target = st.session_state.pop("_map_city_target")
+    st.session_state["City"] = _map_target
+    st.session_state["city_main"] = _map_target
+    st.session_state["Province / Region"] = "All regions"
+    st.session_state["geo"] = None
 
 def _on_sidebar_city_change():
     # Keep the main-area picker in sync with the sidebar picker.
@@ -568,6 +582,11 @@ if page == "Overview":
     <div class="ew-title">Understand the planet.<br>Act on the evidence.</div>
     <div class="ew-sub">One workspace for live weather, real air quality, satellite evidence and long-term climate signals across Pakistan — with transparent sources and scientific context.</div>
     <div><span class="ew-chip">NASA EARTH DATA</span><span class="ew-chip">LIVE AIR QUALITY</span><span class="ew-chip">CLIMATE TRENDS</span><span class="ew-chip">RISK SCREENING</span></div></div>{_hero_now}</section>""", unsafe_allow_html=True)
+    # Live weather scene — an animated sky that matches the LIVE weather
+    # code for this city (sun / clouds / rain / snow / storm / fog).
+    _scene = live_weather_scene_html(weather)
+    if _scene:
+        st.markdown(_scene, unsafe_allow_html=True)
     if _ticker:
         st.markdown(_ticker, unsafe_allow_html=True)
     else:
@@ -633,7 +652,7 @@ if page == "Overview":
     if df is None:
         section("Your climate workspace", "Three steps to your first trend")
         x1, x2, x3 = st.columns(3)
-        with x1: kpi("01 · Select", "Choose a city", "101 mapped urban centres across Pakistan.")
+        with x1: kpi("01 · Select", "Choose a city", f"{len(REGIONS)} mapped places across Pakistan.")
         with x2: kpi("02 · Retrieve", "Connect to NASA", "Fetch daily historical climate estimates.")
         with x3: kpi("03 · Discover", "Read the signal", "Trends, anomalies and risk screening.")
         empty_state("No climate dataset loaded yet",
@@ -775,6 +794,9 @@ elif page == "Air Quality":
 # ================= WEATHER & MAPS =================
 elif page == "Weather & Maps":
     section(f"Weather & Maps — {city}", "Model forecast for planning · Not an official PMD warning or emergency alert")
+    _scene_w = live_weather_scene_html(weather)
+    if _scene_w:
+        st.markdown(_scene_w, unsafe_allow_html=True)
     if _ticker_html:
         st.markdown(_ticker_html, unsafe_allow_html=True)
     if forecast and isinstance(forecast.get("daily"), dict) and forecast["daily"].get("time"):
@@ -801,12 +823,36 @@ elif page == "Weather & Maps":
         st.caption(f"Forecast provider: {forecast.get('source', 'Open-Meteo')} · Generated at {forecast.get('forecast_generated_at', '—')} ({forecast.get('timezone', '')}) · Forecasts can change as new model runs arrive.")
     else: st.warning("Forecast is temporarily unavailable.")
     section("Earth observation workspace", "National map · 3D globe · NASA satellite evidence")
-    wtab, gtab, stab, ctab = st.tabs(["🌡️  National conditions", "🌐  Earth view", "🛰️  Satellite evidence", "📍  City directory"])
+    # National snapshot once, shared by the tap-to-load map and the
+    # National conditions tab (cached 20 min in src/live_weather).
+    region_records = tuple((n, i["latitude"], i["longitude"]) for n, i in REGIONS.items())
+    national_records = safe(lambda: get_national_weather_snapshot(region_records), "Pakistan-wide weather map")
+    mtab, wtab, gtab, stab, ctab = st.tabs(["🗺️  Pakistan Map — tap a place", "🌡️  National conditions", "🌐  Earth view", "🛰️  Satellite evidence", "📍  City directory"])
+    with mtab:
+        st.caption(f"Tap any marker to load that place — live weather, AQI, forecast and climate trend for that exact place. {len(REGIONS)} places across Pakistan, coloured by live temperature. Coordinates are approximate city-centre points.")
+        if national_records:
+            _map_fig = build_pakistan_map_figure(national_records, city)
+            _map_state = st.plotly_chart(_map_fig, use_container_width=True, config={"displayModeBar": False}, on_select="rerun", key="pakistan_map")
+            # A tap returns the place name in the chart selection. Switch
+            # the whole app to it (live weather/AQI use the new place on
+            # the next run) and drop any exact-position override, which
+            # belonged to the previous place.
+            _picked = city_from_selection(getattr(_map_state, "selection", None), current_city=city)
+            if _picked:
+                st.session_state["_map_city_target"] = _picked
+                st.rerun()
+        else:
+            st.info("Live temperatures for the map could not be loaded — the places below still work: pick one to load it.")
+        st.markdown("**Or pick a place from the list**")
+        _map_city = st.selectbox("Place", sorted(REGIONS), index=sorted(REGIONS).index(city), key="map_city_pick", label_visibility="collapsed")
+        if st.button("Load this place →", key="map_load", type="primary", use_container_width=True):
+            if _map_city != city:
+                st.session_state["_map_city_target"] = _map_city
+                st.rerun()
+        st.caption("📍 Tip: tap **Use my location** in the bar above and the app picks the nearest of these places for you — its full details load automatically.")
     with wtab:
         st.caption("Model-based current weather across the mapped Pakistan city directory · Select a layer to recolour the map")
         map_layer = st.selectbox("Weather layer", ["Temperature", "Apparent temperature", "Precipitation", "Humidity", "Wind speed"], key="national_weather_layer")
-        region_records = tuple((n, i["latitude"], i["longitude"]) for n, i in REGIONS.items())
-        national_records = safe(lambda: get_national_weather_snapshot(region_records), "Pakistan-wide weather map")
         if national_records:
             ndf = pd.DataFrame(national_records)
             ndf["province"] = ndf["city"].map(lambda nm: REGIONS.get(nm, {}).get("province", "Pakistan"))
@@ -951,6 +997,52 @@ elif page == "Daily Advisory":
         st.caption("General planning guidance from the 7-day model forecast — confirm with your local agriculture department for crop-specific decisions.")
     else:
         st.info("Farmer advisory unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    # ---------- Farmer crop planting guide ----------
+    # Which crops to sow right now, for THIS place, from real numbers:
+    # the sowing window, this week's forecast and this month's climate.
+    _guide = crop_planting_guide(forecast, weather, monthly, variable)
+    if _guide.get("status") == "ok":
+        _ctx_bits = []
+        if _guide.get("current_temp_c") is not None:
+            _ctx_bits.append(f"Now {_guide['current_temp_c']:.0f} °C")
+        if _guide.get("week_min_c") is not None and _guide.get("week_max_c") is not None:
+            _ctx_bits.append(f"this week {_guide['week_min_c']:.0f}–{_guide['week_max_c']:.0f} °C")
+        if _guide.get("week_rain_mm"):
+            _ctx_bits.append(f"{_guide['week_rain_mm']:.0f} mm rain expected")
+        if _guide.get("typical_month_temp_c") is not None:
+            _ctx_bits.append(f"this month usually ~{_guide['typical_month_temp_c']:.0f} °C here (NASA POWER history)")
+        _sow_n = _guide["summary"]["sow_now"]
+        section("🌾 Crop planting guide — what to sow now",
+                f"{_sow_n} crop{'s' if _sow_n != 1 else ''} in season right now in {city}"
+                + (f" · {'; '.join(_ctx_bits)}" if _ctx_bits else ""))
+        _status_meta = {
+            "sow_now": ("✅ Sow now", "#2fd08c"),
+            "coming_soon": ("🕐 Coming soon", "#f5c542"),
+            "too_late": ("⏰ Too late this season", "#f08a2e"),
+            "wait": ("⏳ Wait", "#9db2c0"),
+        }
+        _crops = _guide["crops"]
+        for _row_start in range(0, len(_crops), 2):
+            _cols = st.columns(2)
+            for _col, _crop in zip(_cols, _crops[_row_start:_row_start + 2]):
+                with _col:
+                    _label, _colour = _status_meta[_crop["status"]]
+                    _watch_html = "".join(
+                        f"<li>{html.escape(w)}</li>" for w in _crop["watch"])
+                    _temp_html = (f"<p style=\"color:#cfe8ef;font-size:.82rem;margin:6px 0 0\">{html.escape(_crop['temp_note'])}</p>"
+                                  if _crop.get("temp_note") else "")
+                    st.markdown(
+                        f'<div class="card ew-live-card"><div class="ew-card-head"><b>{html.escape(_crop["name"])} · {html.escape(_crop["name_ur"])}</b>'
+                        f'<span>{html.escape(_crop["season"])} · Sowing: {html.escape(_crop["window_text"])}</span></div>'
+                        f'<p style="color:{_colour};font-size:1rem;font-weight:700;margin:12px 0 0">{_label}</p>'
+                        f'<p style="color:#e8f1f5;font-size:.86rem;margin:6px 0 0">{html.escape(_crop["reason"])}</p>'
+                        f"{_temp_html}"
+                        f'<ul style="color:#e8f1f5;font-size:.84rem">{_watch_html}</ul>'
+                        f'<p style="color:#9db2c0;font-size:.78rem;margin:8px 0 0">💧 {html.escape(_crop["water"])}<br>{html.escape(_crop["note"])}</p>'
+                        f'</div>', unsafe_allow_html=True)
+        st.caption(_guide["disclaimer"])
+    else:
+        st.info("Crop planting guide unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
     _rain = rain_warning(forecast)
     if _rain.get("status") == "ok":
         _rain_days = "".join(
