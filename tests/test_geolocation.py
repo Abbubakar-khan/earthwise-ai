@@ -390,3 +390,22 @@ def test_locating_caption_shows_after_tap(geo_app):
     at.button(key="geo_use").click().run()
     assert not at.exception
     assert "Locating" in _all_text(at)
+
+
+def test_assistant_example_has_no_literal_markdown_markers(geo_app):
+    """Assistant answers are written in Markdown (**bold**), but the app
+    renders them inside raw-HTML bubbles where Streamlit does not parse
+    Markdown — the ** markers showed literally on the AI Assistant page
+    (seen live 2026-11-14). Bold must render as <b>, with no ** left."""
+    at = geo_app()
+    at.radio(key="page").set_value("AI Assistant").run()
+    assert not at.exception
+    # Scope to the assistant's own HTML bubbles only: the sidebar's
+    # "Climate signal" list legitimately uses ** in a real st.markdown
+    # call, where Markdown IS parsed and bold renders fine.
+    bubbles = [m.value for m in at.markdown
+               if "ew-assistant-cap" in m.value
+               or 'class="chat-a"' in m.value or 'class="chat-q"' in m.value]
+    assert bubbles, "assistant example/chat bubbles missing"
+    assert all("**" not in b for b in bubbles)
+    assert any("<b>" in b for b in bubbles)  # the example answer's bold survived as HTML
