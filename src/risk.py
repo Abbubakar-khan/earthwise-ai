@@ -50,9 +50,11 @@ def compute_risk(monthly, variable, trend, latest_anomaly=None,
         out["scores"]["trend"] = s
         out["scores"]["trend_direction"] = trend.get("direction")
         out["scores"]["trend_label"] = risk_level(s)
+        _p = trend.get("p_value")
+        _p_text = f"{_p:.2f}" if isinstance(_p, (int, float)) else "unavailable"
         out["notes"].append(
             f"Trend signal from Sen's slope {slope:+.3g} per decade "
-            f"(Kendall p={trend.get('p_value')}, n={trend.get('n')} months).")
+            f"(Kendall p={_p_text}, n={trend.get('n')} months).")
     if latest_anomaly is not None:
         try:
             a = abs(float(latest_anomaly))
