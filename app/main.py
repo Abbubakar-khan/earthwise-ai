@@ -417,6 +417,12 @@ if _geo:
     else:
         st.caption(f"📍 Nearest city in our catalogue: {_geo['city']} ({_geo['distance_km']:.0f} km away) · live weather uses your exact position ({_geo['latitude']:.4f}° N, {_geo['longitude']:.4f}° E)")
 else:
+    # A detection is in flight (auto-prompt on first load, or the visitor
+    # just tapped "Use my location") and no result has arrived yet: say so,
+    # so the button never looks dead. It clears itself when the component
+    # reports ok/denied/timeout/unavailable.
+    if not st.session_state.get("geo_attempted") and _geo_result is None:
+        st.caption("📍 Locating… please allow location access in your browser, or pick a city below.")
     _geo_note = st.session_state.get("geo_note")
     if _geo_note:
         st.caption(_geo_note)
