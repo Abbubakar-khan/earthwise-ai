@@ -27,6 +27,7 @@ from src.air_quality import get_air_quality
 from src.risk import compute_risk, project_trend
 from src.ai_assistant import answer_question
 from src.advisory import advisory_summary, daily_health_verdict, farmer_advisory, rain_warning
+from src.body import best_hours, current_strain, hourly_strain
 from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, live_weather_scene_html, ticker_html, weather_animation_class
 from src.pakistan_map import build_pakistan_map_figure, city_from_selection
 from src.farmer import crop_planting_guide
@@ -981,7 +982,7 @@ elif page == "Risk & Outlook":
 
 # ================= DAILY ADVISORY =================
 elif page == "Daily Advisory":
-    section(f"Daily Advisory — {city}", "Three plain-language advisories from today's live data · What the numbers mean for your health, your fields and your travel")
+    section(f"Daily Advisory — {city}", "Six plain-language advisories from today's live data · What the numbers mean for your health, your fields and your travel")
     _health = daily_health_verdict(weather, aqi)
     if _health.get("status") == "ok":
         _factors = " · ".join(_health["factors"]) if _health["factors"] else "—"
@@ -1054,6 +1055,37 @@ elif page == "Daily Advisory":
         st.caption("Model forecast screening, not an official warning — Pakistan Meteorological Department (PMD) issues official warnings.")
     else:
         st.info("Rain warning unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    # ---------- Heart & body — strain through the day ----------
+    # Estimated strain on the body from live weather (temperature,
+    # humidity, AQI). This is NOT a heartbeat: no smartwatch or heart
+    # sensor is connected — the honesty note under the graph says so.
+    _aqi_now = ((aqi or {}).get("current") or {}).get("us_aqi")
+    _hum_now = (weather or {}).get("relative_humidity_2m")
+    _strain_now = current_strain(weather, aqi)
+    _strain_day = hourly_strain((forecast or {}).get("hourly"), humidity=_hum_now, us_aqi=_aqi_now)
+    if _strain_now.get("status") == "ok" and _strain_day.get("status") == "ok":
+        _strain_advice = "".join(f"<li>{html.escape(a)}</li>" for a in _strain_now["advice"])
+        _peak = _strain_day["peak"]
+        _peak_txt = f"Hardest hour: {_peak['time']} (strain {_peak['strain']}/10 — {_peak['label']})" if _peak else ""
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>❤️ Heart & body — strain through the day</b><span>Right now: {html.escape(_strain_now["label"])} · {_strain_now["score"]}/10</span></div><p style="color:#e8f1f5;font-size:.95rem;margin:12px 0 0">{html.escape(_peak_txt)}</p><ul style="color:#e8f1f5">{_strain_advice}</ul></div>', unsafe_allow_html=True)
+        _strain_fig = px.line({"time": [h["time"] for h in _strain_day["hours"]], "strain": [h["strain"] for h in _strain_day["hours"]]}, x="time", y="strain", markers=True)
+        _strain_fig.update_layout(yaxis=dict(range=[0, 10], title="Strain (0–10)"), xaxis=dict(title="Hour"), height=260, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="#e8f1f5"))
+        _strain_fig.update_traces(line=dict(color="#e5484d", width=2.5))
+        st.plotly_chart(_strain_fig, use_container_width=True, key="body_strain_chart")
+        st.caption("This is an ESTIMATE of strain on your body from weather data (temperature, humidity, AQI) — it is NOT a measured heartbeat. No smartwatch or heart sensor is connected, so no real heart-rate data exists in this app. General guidance only — not medical advice.")
+    else:
+        st.info("Heart & body strain unavailable — live weather and air quality could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
+    # ---------- Best hours today ----------
+    _best = best_hours((forecast or {}).get("hourly"), us_aqi=_aqi_now)
+    if _best.get("status") == "ok":
+        _best_items = "".join(f"<li><b>{html.escape(b['time'])}</b> — {html.escape(b['reason'])} (score {b['score']}/10)</li>" for b in _best["best"])
+        _avoid_html = ""
+        if _best["avoid"]:
+            _avoid_items = "".join(f"<li><b>{html.escape(a['time'])}</b> — {html.escape(a['reason'])} (score {a['score']}/10)</li>" for a in _best["avoid"])
+            _avoid_html = f"<p style=\"color:#f5c542;font-size:.9rem;margin:10px 0 0\">Hours to avoid:</p><ul style=\"color:#e8f1f5\">{_avoid_items}</ul>"
+        st.markdown(f'<div class="card ew-live-card"><div class="ew-card-head"><b>🕐 Best hours today</b><span>{html.escape(_best["summary"])}</span></div><ul style="color:#e8f1f5">{_best_items}</ul>{_avoid_html}</div>', unsafe_allow_html=True)
+    else:
+        st.info("Best hours unavailable — the 7-day forecast could not be loaded. Press **Refresh live weather / AQI** in the sidebar.")
     st.markdown('<div class="ew-foot">EARTHWISE AI · PAKISTAN-FIRST EARTH INTELLIGENCE<br><strong>Created by Muhammad Abbubakar</strong> · Founder<br>Advisories are screening guidance from model data, not official warnings</div>', unsafe_allow_html=True)
 
 # ================= DATA & DOWNLOADS =================
