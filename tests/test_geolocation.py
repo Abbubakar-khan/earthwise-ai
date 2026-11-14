@@ -358,3 +358,35 @@ def test_change_button_clears_detection(geo_app):
     assert at.session_state["geo"] is None
     assert at.session_state["City"] == "Lahore"  # city stays; only exact coords drop
     assert at.button(key="geo_use") is not None  # button is back
+
+
+# ---------- component bundle regression (2026-11-14) ----------
+
+def test_component_js_relative_imports_have_extensions():
+    """Native ES modules need the file extension: "./ArrowTable" (no .js)
+    fails to resolve in the browser, so the whole component never loads —
+    the "Use my location" button then silently does nothing live (the
+    "trouble loading the main.earthwise_geolocation component" banner).
+    Every relative import in the vendored component must end in .js.
+    """
+    import re
+
+    for name in ("streamlit.js", "index.html", "ArrowTable.js"):
+        text = (COMPONENT_DIR / name).read_text(encoding="utf-8")
+        # Skip //-comment lines: docstrings may quote an import path.
+        code = "\n".join(
+            line for line in text.splitlines()
+            if not line.strip().startswith("//")
+        )
+        for imp in re.findall(r"""from\s+["'](\.[^"']+)["']""", code):
+            assert imp.endswith(".js"), f"{name} has extensionless import: {imp}"
+    assert './ArrowTable.js"' in (COMPONENT_DIR / "streamlit.js").read_text(encoding="utf-8")
+
+
+def test_locating_caption_shows_after_tap(geo_app):
+    """Tapping "Use my location" must give visible feedback while the
+    detection is in flight, instead of the button looking dead."""
+    at = geo_app()
+    at.button(key="geo_use").click().run()
+    assert not at.exception
+    assert "Locating" in _all_text(at)
