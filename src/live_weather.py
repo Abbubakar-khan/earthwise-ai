@@ -5,12 +5,31 @@ These are model-derived current conditions, not guaranteed ground-station observ
 from __future__ import annotations
 
 import os
+import time
 
 import requests
 import streamlit as st
 
 FREE_API_URL = "https://api.open-meteo.com/v1/forecast"
 COMMERCIAL_API_URL = "https://customer-api.open-meteo.com/v1/forecast"
+
+
+def _get_with_retry(api_url: str, params: dict, timeout: int, attempts: int = 3):
+    """GET with retries: the Streamlit Cloud egress to Open-Meteo sometimes
+    stalls for a whole fetch (read timeout), while the API itself is up —
+    a single attempt then shows the whole app as broken. Retry with
+    backoff and raise the last error only if every attempt fails."""
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            response = requests.get(api_url, params=params, timeout=timeout)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < attempts - 1:
+                time.sleep(2 * (attempt + 1))
+    raise last_error  # type: ignore[misc]
 
 
 def _get_api_key() -> str | None:
@@ -60,8 +79,7 @@ def get_current_conditions(latitude: float, longitude: float, city: str) -> dict
     api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
     if api_key:
         params["apikey"] = api_key
-    response = requests.get(api_url, params=params, timeout=20)
-    response.raise_for_status()
+    response = _get_with_retry(api_url, params=params, timeout=20)
     payload = response.json()
     current = payload.get("current")
     if not isinstance(current, dict) or "temperature_2m" not in current:
@@ -96,8 +114,7 @@ def get_weather_forecast(latitude: float, longitude: float) -> dict:
     api_url = COMMERCIAL_API_URL if api_key else FREE_API_URL
     if api_key:
         params["apikey"] = api_key
-    response = requests.get(api_url, params=params, timeout=25)
-    response.raise_for_status()
+    response = _get_with_retry(api_url, params=params, timeout=25)
     payload = response.json()
     daily = payload.get("daily")
     hourly = payload.get("hourly")
@@ -134,8 +151,7 @@ def get_national_weather_snapshot(region_records: tuple[tuple[str, float, float]
         }
         if api_key:
             params["apikey"] = api_key
-        response = requests.get(api_url, params=params, timeout=30)
-        response.raise_for_status()
+        response = _get_with_retry(api_url, params=params, timeout=30)
         payload = response.json()
         if isinstance(payload, dict):
             payload = [payload]
