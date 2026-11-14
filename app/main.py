@@ -52,6 +52,19 @@ def kpi(label, value, note="", accent="#7ee8d6", delay_ms=0):
 def section(title, sub=""):
     st.markdown(f'<div class="ew-section">{title}</div>' + (f'<p class="ew-sub2">{sub}</p>' if sub else ""), unsafe_allow_html=True)
 
+def _answer_html(text):
+    """Render an assistant answer inside a raw-HTML bubble.
+
+    Answers are written in Markdown (**bold**), but Streamlit does not
+    parse Markdown inside a raw-HTML div — the ** markers showed literally
+    in the example answer and chat bubbles. Escape everything first, then
+    turn **...** into <b>...</b> so bold renders and no HTML from the
+    answer can leak through.
+    """
+    import re
+    safe_text = html.escape(str(text))
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", safe_text)
+
 def _stat(label, value):
     """One compact stat tile (value wraps, never truncates)."""
     return f'<div class="ew-stat"><div class="ew-stat-label">{html.escape(str(label))}</div><div class="ew-stat-value">{html.escape(str(value))}</div></div>'
@@ -845,7 +858,7 @@ elif page == "AI Assistant":
                 _example = ""
         if _example:
             _short = _example if len(_example) <= 240 else _example[:237].rsplit(" ", 1)[0] + "…"
-            st.markdown(f'<div class="ew-assistant-cap"><b>Example — “What is the air quality?”</b><ul><li>{html.escape(_short)}</li></ul></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="ew-assistant-cap"><b>Example — “What is the air quality?”</b><ul><li>{_answer_html(_short)}</li></ul></div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="ew-assistant-cap"><b>Example — “What is the air quality?”</b><ul><li>Air quality is loading — press <b>Refresh live weather / AQI</b> in the sidebar and ask again.</li></ul></div>', unsafe_allow_html=True)
     sugg = st.columns(4)
@@ -862,7 +875,7 @@ elif page == "AI Assistant":
     for role, text in st.session_state.chat[-12:]:
         cls = "chat-q" if role == "user" else "chat-a"
         who = "You" if role == "user" else "EarthWise AI"
-        st.markdown(f'<div class="{cls}"><b>{who}</b><br>{text}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="{cls}"><b>{who}</b><br>{_answer_html(text)}</div>', unsafe_allow_html=True)
     if st.button("Clear conversation"):
         st.session_state.chat = []; st.rerun()
     st.caption("Evidence-bound assistant: no LLM, no invented numbers. Every answer cites the dataset already loaded on this page. For official warnings use PMD / health authorities.")
