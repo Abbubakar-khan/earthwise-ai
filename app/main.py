@@ -193,18 +193,6 @@ div[data-testid="stMetric"]{min-height:86px}
 """, unsafe_allow_html=True)
 if "frames" not in st.session_state: st.session_state.frames = {}
 if "chat" not in st.session_state: st.session_state.chat = []
-# Opening intro splash — once per session, ~2.5s, instead of a blank load.
-# Shown BEFORE any live fetch, so the first thing a visitor sees is the
-# brand, not a spinner. Reduced-motion users see a near-static splash.
-# The splash is rendered in this SAME first run, overlaying the app with
-# position:fixed, and its CSS fade-out (3.1s) runs from the moment the
-# browser paints it — no server-side sleep + rerun. (The old sleep/rerun
-# pattern raced the browser paint: on slow connections / cold Streamlit
-# starts the rerun could replace the page before the splash was ever
-# painted, so visitors saw it flash or not at all.)
-if not st.session_state.get("intro_seen"):
-    st.session_state["intro_seen"] = True
-    st.markdown(intro_html(), unsafe_allow_html=True)
 st.markdown('<div class="ew-top"><div class="ew-brand">EARTHWISE&nbsp;<span>AI</span>&nbsp;&nbsp;<span class="ew-brand-sub">/ PAKISTAN INTELLIGENCE</span></div><div class="ew-live"><i></i> LIVE DATA WORKSPACE</div></div>', unsafe_allow_html=True)
 
 def empty_state(title, body, steps):
@@ -846,7 +834,7 @@ elif page == "Weather & Maps":
         st.caption(f"Tap any marker to load that place — live weather, AQI, forecast and climate trend for that exact place. {len(REGIONS)} places across Pakistan, coloured by live temperature. Coordinates are approximate city-centre points.")
         if national_records:
             _map_fig = build_pakistan_map_figure(national_records, city)
-            _map_state = st.plotly_chart(_map_fig, use_container_width=True, config={"displayModeBar": False}, on_select="rerun", key="pakistan_map")
+            _map_state = st.plotly_chart(_map_fig, use_container_width=True, config={"displayModeBar": False, "scrollZoom": False}, on_select="rerun", key="pakistan_map")
             # A tap returns the place name in the chart selection. Switch
             # the whole app to it (live weather/AQI use the new place on
             # the next run) and drop any exact-position override, which
@@ -1142,3 +1130,16 @@ elif page == "Data & Downloads":
 """)
     st.caption("No database is used — the original design stores raw NASA POWER CSV + JSON metadata in `data/raw/` (git-ignored). No user accounts, passwords or secrets are stored in this repo. Never commit `.env` or Streamlit secrets.")
     st.markdown('<div class="ew-foot">EARTHWISE AI · PAKISTAN-FIRST EARTH INTELLIGENCE<br><strong>Created by Muhammad Abbubakar</strong> · Founder</div>', unsafe_allow_html=True)
+
+# Opening intro splash — emitted LAST, once per session, ~2.5s.
+# Streamlit streams elements to the browser as the script runs, so a splash
+# emitted early starts its CSS fade-out timer while the run is still
+# fetching data — on a slow first run it fades before the app finishes
+# loading and the visitor never sees it (live check 2026-11-14: the staged
+# splash was never visible on any load). Emitting it after all page content
+# means its 2.5s timer starts when the page is complete. The overlay is
+# position:fixed, so its place in the DOM is irrelevant. Reduced-motion
+# users see a near-static splash. No server-side sleep + rerun.
+if not st.session_state.get("intro_seen"):
+    st.session_state["intro_seen"] = True
+    st.markdown(intro_html(), unsafe_allow_html=True)
