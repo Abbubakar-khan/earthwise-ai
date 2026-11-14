@@ -29,6 +29,8 @@ from src.ai_assistant import answer_question
 from src.advisory import advisory_summary, daily_health_verdict, farmer_advisory, rain_warning
 from src.body import best_hours, current_strain, hourly_strain
 from src.animations import ANIMATION_CSS, DESIGN_CSS, INTRO_CSS, build_ticker_items, demo_is_default, forecast_cards_html, hero_now_html, hero_symbol_html, intro_html, live_weather_scene_html, ticker_html, weather_animation_class
+from src.provenance import provenance_html, provenance_rows
+from src.story import climate_story
 from src.pakistan_map import build_pakistan_map_figure, city_from_selection
 from src.farmer import crop_planting_guide
 from src.geolocation import (
@@ -135,40 +137,42 @@ h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif!important;letter-spacing:-.03
 .ew-live{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid rgba(126,232,214,.25);border-radius:999px;background:rgba(126,232,214,.08);color:#a9e8df;font-size:.65rem;font-weight:700;letter-spacing:.1em}
 .ew-live i{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.4}}
-.ew-hero{padding:clamp(22px,3vw,36px);margin-bottom:22px;border:1px solid var(--border);border-radius:20px;background:linear-gradient(135deg,rgba(16,42,61,.9),rgba(9,24,36,.85));box-shadow:0 18px 40px rgba(0,0,0,.25)}
+.ew-hero{padding:clamp(22px,3vw,36px);margin-bottom:22px;border:1px solid var(--border);border-radius:var(--r-xl);background:linear-gradient(135deg,rgba(16,42,61,.9),rgba(9,24,36,.85));box-shadow:var(--sh-lg)}
 .ew-eyebrow{color:var(--accent);font-size:.66rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-.ew-title{font:700 clamp(1.9rem,4vw,3rem)/1.05 'Space Grotesk';letter-spacing:-.05em;margin:10px 0}
+.ew-eyebrow::before{content:'●';margin-right:7px;font-size:.55rem;vertical-align:middle}
+.ew-title{font:700 clamp(1.9rem,4vw,3rem)/1.05 'Space Grotesk';letter-spacing:-.05em;margin:10px 0;text-wrap:balance}
 .ew-sub{max-width:720px;color:#b0c2ce;font-size:.93rem;line-height:1.7}
 .ew-sub2{color:var(--muted);font-size:.8rem;margin:-4px 0 12px}
 .ew-chip{display:inline-block;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:rgba(255,255,255,.03);color:#b7c9d3;font-size:.63rem;font-weight:600;letter-spacing:.06em;margin:4px 4px 0 0}
-.ew-section{display:flex;align-items:center;gap:10px;margin:1.6rem 0 .4rem;font:600 1.15rem 'Space Grotesk'}
+.ew-section{display:flex;align-items:center;gap:10px;margin:1.6rem 0 .4rem;font:700 1.2rem 'Space Grotesk';letter-spacing:-.02em;text-wrap:balance}
 .ew-section:before{content:'';width:3px;height:1.05rem;border-radius:3px;background:var(--accent)}
-.kpi{height:100%;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,var(--surface2),var(--surface));transition:transform .15s,border-color .15s}
-.kpi:hover{transform:translateY(-2px);border-color:rgba(126,232,214,.35)}
+.kpi{height:100%;display:flex;flex-direction:column;padding:16px 18px;border:1px solid var(--border);border-radius:var(--r-md);background:linear-gradient(180deg,var(--surface2),var(--surface));transition:transform .15s,border-color .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-2px);border-color:rgba(126,232,214,.35);box-shadow:var(--sh-md)}
 .kpi-label{color:var(--muted);font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.kpi-value{font:600 1.55rem 'Space Grotesk';margin-top:8px;letter-spacing:-.03em}
-.kpi-note{color:var(--muted);font-size:.74rem;margin-top:4px;line-height:1.5}
-.card{padding:18px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.kpi-value{font:600 1.55rem 'Space Grotesk';margin-top:8px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi-note{color:var(--muted);font-size:.74rem;margin-top:auto;padding-top:6px;line-height:1.5}
+.card{padding:18px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);transition:border-color .15s,transform .15s,box-shadow .15s}
 [data-testid="stSidebar"]{min-width:300px!important;max-width:300px!important;background:#081624;border-right:1px solid var(--border)}
 [data-testid="stSidebar"] *{color:#dce8ee}
 [data-testid="stSidebar"] h3{font-size:.66rem;color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 [data-testid="stSidebar"] label{font-size:.77rem;color:#b5c6d0;font-weight:600}
-div[data-testid="stMetric"]{padding:14px 16px;border:1px solid var(--border);border-radius:13px;background:var(--surface)}
-.stButton>button,.stDownloadButton>button{min-height:42px;border:1px solid var(--border)!important;border-radius:9px!important;background:#172b3b!important;color:#e8f1f5!important;font-size:.82rem!important;font-weight:600!important}
-.stButton>button:hover,.stDownloadButton>button:hover{background:#20394b!important;border-color:rgba(126,232,214,.4)!important}
+div[data-testid="stMetric"]{padding:14px 16px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}
+.stButton>button,.stDownloadButton>button{min-height:42px;border:1px solid var(--border)!important;border-radius:9px!important;background:#172b3b!important;color:#e8f1f5!important;font-size:.82rem!important;font-weight:600!important;transition:transform .12s,background .15s,border-color .15s,box-shadow .15s}
+.stButton>button:hover,.stDownloadButton>button:hover{background:#20394b!important;border-color:rgba(126,232,214,.4)!important;transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.25)}
 .stButton>button[kind="primary"]{background:var(--accent)!important;border-color:var(--accent)!important;color:#06201e!important}
-.stSelectbox [data-baseweb="select"]>div,.stTextInput input,.stNumberInput input{background:#0b1b29!important;border-color:var(--border)!important;border-radius:8px!important;color:var(--text)!important}
+.stSelectbox [data-baseweb="select"]>div,.stTextInput input,.stNumberInput input{background:#0b1b29!important;border-color:var(--border)!important;border-radius:8px!important;color:var(--text)!important;transition:border-color .15s,box-shadow .15s}
+.stSelectbox [data-baseweb="select"]>div:focus-within,.stTextInput input:focus,.stNumberInput input:focus{border-color:rgba(126,232,214,.55)!important;box-shadow:0 0 0 2px rgba(126,232,214,.15)!important}
 .stTabs [data-baseweb="tab-list"]{gap:5px;padding:5px;border:1px solid var(--border);border-radius:10px;background:#091824;overflow-x:auto;flex-wrap:nowrap}
-.stTabs [data-baseweb="tab"]{height:39px;padding:0 13px;border-radius:7px;color:#a9bdc9;font-size:.78rem;font-weight:600;white-space:nowrap}
+.stTabs [data-baseweb="tab"]{height:39px;padding:0 13px;border-radius:7px;color:#a9bdc9;font-size:.78rem;font-weight:600;white-space:nowrap;transition:background .15s,color .15s}
 .stTabs [aria-selected="true"]{background:#173747!important;color:#9ce9df!important}
 [data-testid="stExpander"]{border:1px solid var(--border);border-radius:11px;background:rgba(13,31,46,.6)}
-[data-testid="stPlotlyChart"],[data-testid="stDataFrame"]{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+[data-testid="stPlotlyChart"],[data-testid="stDataFrame"]{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:rgba(13,31,46,.55);min-height:120px}
 .stAlert{border-radius:10px}
-.ew-ai{padding:18px 20px;border:1px solid rgba(126,232,214,.22);border-left:3px solid var(--accent);border-radius:13px;background:#102b38}
-.chat-q{background:#12283a;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:6px 0}
-.chat-a{background:#0e2a33;border:1px solid rgba(126,232,214,.2);border-radius:12px;padding:12px 14px;margin:6px 0}
+.ew-ai{padding:18px 20px;border:1px solid rgba(126,232,214,.22);border-left:3px solid var(--accent);border-radius:var(--r-md);background:#102b38}
+.chat-q{background:#12283a;border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;margin:6px 0}
+.chat-a{background:#0e2a33;border:1px solid rgba(126,232,214,.2);border-radius:var(--r-md);padding:12px 14px;margin:6px 0}
 .ew-foot{padding:18px 0 4px;color:#8299a8;font-size:.68rem;text-align:center}
-@media(max-width:700px){.block-container{padding:.85rem .75rem 1.8rem!important}.ew-top{flex-direction:column;align-items:flex-start;gap:9px}.stButton>button,.stDownloadButton>button{width:100%}}
+@media(max-width:700px){.block-container{padding:.85rem .75rem 1.8rem!important}.ew-top{flex-direction:column;align-items:flex-start;gap:9px}.stButton>button,.stDownloadButton>button{width:100%;min-height:44px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 """, unsafe_allow_html=True)
@@ -178,7 +182,7 @@ st.markdown(f"<style>{ANIMATION_CSS}{DESIGN_CSS}{INTRO_CSS}"
 /* Interface polish — same dark premium look, no new deps */
 .ew-sub2{color:#b0c2ce}
 .card{min-height:118px}
-.card:hover{border-color:rgba(126,232,214,.28)}
+.card:hover{border-color:rgba(126,232,214,.28);transform:translateY(-2px);box-shadow:var(--sh-md)}
 .stTabs [data-baseweb="tab"]:hover{color:#d6e8f0}
 div[data-testid="stMetric"]{min-height:86px}
 .stDownloadButton>button{width:100%}
@@ -189,7 +193,7 @@ div[data-testid="stMetric"]{min-height:86px}
 """, unsafe_allow_html=True)
 if "frames" not in st.session_state: st.session_state.frames = {}
 if "chat" not in st.session_state: st.session_state.chat = []
-# Opening intro splash — once per session, ~3s, instead of a blank load.
+# Opening intro splash — once per session, ~2.5s, instead of a blank load.
 # Shown BEFORE any live fetch, so the first thing a visitor sees is the
 # brand, not a spinner. Reduced-motion users see a near-static splash.
 # The splash is rendered in this SAME first run, overlaying the app with
@@ -580,7 +584,7 @@ if page == "Overview":
     _ticker = _ticker_html
     _hero_now = hero_now_html(weather, aqi)
     st.markdown(f"""<section class="ew-hero ew-hero-anim {_wx_class}"><div class="ew-hero-left"><div class="ew-eyebrow">PAKISTAN · WEATHER & EARTH OBSERVATION · {city.upper()}</div>
-    <div class="ew-title">Understand the planet.<br>Act on the evidence.</div>
+    <div class="ew-title">Understand the planet.<br>Act on the <span class="ew-grad">evidence</span>.</div>
     <div class="ew-sub">One workspace for live weather, real air quality, satellite evidence and long-term climate signals across Pakistan — with transparent sources and scientific context.</div>
     <div><span class="ew-chip">NASA EARTH DATA</span><span class="ew-chip">LIVE AIR QUALITY</span><span class="ew-chip">CLIMATE TRENDS</span><span class="ew-chip">RISK SCREENING</span></div></div>{_hero_now}</section>""", unsafe_allow_html=True)
     # Live weather scene — an animated sky that matches the LIVE weather
@@ -624,6 +628,9 @@ if page == "Overview":
         if st.button("Open Daily Advisory →", key="adv_open", type="primary", use_container_width=True):
             st.session_state["_nav_target"] = "Daily Advisory"
             st.rerun()
+    # NASA data provenance — every live number traced to its source.
+    _prov = provenance_rows(weather, aqi, forecast, meta)
+    st.markdown(provenance_html(_prov, city), unsafe_allow_html=True)
     section("Live now", f"{city} · {REGIONS[city]['province']} · Model-based conditions, cached 15 min · Air quality cached 30 min")
     a, b = st.columns(2)
     with a:
@@ -670,6 +677,9 @@ if page == "Overview":
         fig.update_traces(line=dict(color="#6ce7f4", width=2.5), fillcolor="rgba(74,196,224,.12)", hovertemplate="%{x|%b %Y}<br>%{y:.2f}<extra></extra>")
         st.plotly_chart(plot_style(fig, 380), use_container_width=True, config={"displaylogo": False, "responsive": True})
         st.caption("Monthly precipitation is summed; other indicators are monthly means. Source: NASA POWER.")
+        _story = climate_story(city, variable, spec["label"], analysis_unit, trend, monthly)
+        if _story.get("status") == "ok":
+            st.markdown(f'<div class="card ew-story"><div class="ew-card-head"><b>📖 The story in one line</b></div><p>{html.escape(_story["line"])}</p><p class="ew-story-detail">{html.escape(_story["detail"])}</p></div>', unsafe_allow_html=True)
     st.markdown('<div class="ew-foot">EARTHWISE AI · PAKISTAN-FIRST EARTH INTELLIGENCE<br><strong>Created by Muhammad Abbubakar</strong> · Founder<br>Historical research and data exploration · Not an emergency monitoring service</div>', unsafe_allow_html=True)
 
 # ================= CLIMATE ANALYTICS =================
@@ -694,6 +704,9 @@ elif page == "Climate Analytics":
     with m4:
         if trend and trend.get("status") == "ok": kpi("Kendall p-value", f"{trend['p_value']:.4g}" if trend.get("p_value") is not None else "Unavailable", "Significant at 0.05" if trend.get("significant_005") else "Not significant at 0.05")
         else: kpi("Kendall p-value", "—", trend.get("message", "") if trend else "")
+    _story_ca = climate_story(city, variable, spec["label"], analysis_unit, trend, monthly)
+    if _story_ca.get("status") == "ok":
+        st.markdown(f'<div class="card ew-story"><div class="ew-card-head"><b>📖 The story in one line</b><span>Plain words from the computed trend — no claim the data do not support</span></div><p>{html.escape(_story_ca["line"])}</p><p class="ew-story-detail">{html.escape(_story_ca["detail"])}</p></div>', unsafe_allow_html=True)
     t1, t2, t3 = st.tabs(["📈  Time series", "🌡️  Seasonal anomalies", "🧠  AI Earth Scientist"])
     with t1:
         fig = px.area(monthly, x="date", y=variable, labels={"date": "Month", variable: f"{spec['label']} ({analysis_unit})"})
@@ -1115,6 +1128,9 @@ elif page == "Data & Downloads":
             st.write("**Aggregation:**", "Monthly sum of daily values" if spec["aggregation"] == "sum" else "Monthly mean of daily values")
             st.markdown("[NASA POWER API documentation](https://power.larc.nasa.gov/docs/services/api/temporal/daily/)")
     section("APIs & configuration", "What this app calls — and what you need (or don't need) to run it")
+    if st.button("See the live provenance panel on Overview →", key="prov_open", type="secondary", use_container_width=True):
+        st.session_state["_nav_target"] = "Overview"
+        st.rerun()
     st.markdown("""
 | Service | Purpose | Key needed? |
 |---|---|---|
