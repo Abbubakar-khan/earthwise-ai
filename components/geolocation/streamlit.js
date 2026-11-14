@@ -25,7 +25,7 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 // Safari doesn't support the EventTarget class, so we use a shim.
-import { ArrowTable } from "./ArrowTable";
+import { ArrowTable } from "./ArrowTable.js";
 /** Messages from Component -> Streamlit */
 var ComponentMessageType;
 (function (ComponentMessageType) {
