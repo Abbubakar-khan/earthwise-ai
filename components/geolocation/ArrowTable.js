@@ -5,7 +5,7 @@
 // plain JSON (request/request_id) and its value is plain JSON (status /
 // latitude / longitude) — so the real ArrowTable implementation is never
 // used. This stub exists only so streamlit.js's static
-// `import { ArrowTable } from "./ArrowTable"` resolves without pulling in
+// `import { ArrowTable } from "./ArrowTable.js"` resolves without pulling in
 // the large `apache-arrow` package. It must not be used for real tables:
 // constructing one throws loudly instead of silently misbehaving.
 export class ArrowTable {
