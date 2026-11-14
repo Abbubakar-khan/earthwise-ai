@@ -87,8 +87,26 @@ def test_intro_title_flies_in_letter_by_letter():
     assert "@keyframes introFlyIn" in INTRO_CSS
     assert "translateY(-56px)" in INTRO_CSS
     assert ".ew-intro-letter" in INTRO_CSS
-    assert "introFadeOut .6s ease 3.1s" in INTRO_CSS  # splash stays ~3s, fades after
+    assert "introFadeOut .5s ease 2.5s" in INTRO_CSS  # splash stays ~2.5s, fades after
     assert "animation-delay:0ms!important" in INTRO_CSS  # reduced-motion: no stagger
+
+
+def test_intro_splash_has_real_loading_stages_and_globe_pulse():
+    """Intro upgrade (2026-11-14): staged loading text reflecting real
+    stages, a pulsing ring around the globe, and a title glow — all CSS,
+    all inside the ~2.5s splash."""
+    out = intro_html()
+    assert "Connecting to NASA POWER" in out
+    assert "Fetching live weather" in out
+    assert "Loading 10-year climate history" in out
+    assert "ew-intro-stages" in out and "ew-intro-stage" in out
+    assert out.count("ew-intro-stage") == 4  # container + 3 stage spans
+    assert "ew-intro-ring" in out
+    assert "@keyframes introStage" in INTRO_CSS
+    assert "@keyframes introStageLast" in INTRO_CSS
+    assert "@keyframes introTitleGlow" in INTRO_CSS
+    assert "@keyframes introRing" in INTRO_CSS
+    assert "introBar 2.3s" in INTRO_CSS
 
 
 def test_animation_css_respects_reduced_motion_and_mobile():
