@@ -24,15 +24,21 @@ AQI_BANDS = [
 
 
 def aqi_category(us_aqi):
-    """Return (label, colour, advice) for a US AQI value, or Unknown."""
+    """Return (label, colour, advice) for a US AQI value, or Unknown.
+
+    Bands are matched by upper bound only: the EPA bands are contiguous
+    (0–50, 51–100, ...), so a fractional value such as 50.5 must land in
+    Moderate, not fall through the gap between bands (the old lo<=v<=hi
+    test labelled 50.5 "Hazardous").
+    """
     if us_aqi is None:
         return ("Unknown", "#8a9aa8", "No AQI value was returned.")
     try:
         v = float(us_aqi)
     except (TypeError, ValueError):
         return ("Unknown", "#8a9aa8", "No AQI value was returned.")
-    for lo, hi, label, colour, advice in AQI_BANDS:
-        if lo <= v <= hi:
+    for _lo, hi, label, colour, advice in AQI_BANDS:
+        if v <= hi:
             return (label, colour, advice)
     return ("Hazardous", "#7a1f2b", "Emergency conditions: avoid outdoor activity.")
 
