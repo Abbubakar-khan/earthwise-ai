@@ -9,6 +9,13 @@ def test_aqi_bands():
     assert aqi_category(25)[0] == "Good"
     assert aqi_category(175)[0] == "Unhealthy"
     assert aqi_category(None)[0] == "Unknown"
+    # Regression (2026-11-15): fractional values between the integer bands
+    # used to fall through every band and be labelled "Hazardous".
+    assert aqi_category(50.5)[0] == "Moderate"
+    assert aqi_category(100.5)[0] == "Unhealthy for Sensitive Groups"
+    assert aqi_category(150.5)[0] == "Unhealthy"
+    assert aqi_category(200.5)[0] == "Very Unhealthy"
+    assert aqi_category(300.5)[0] == "Hazardous"
 
 
 def test_dominant_pollutant():
@@ -33,6 +40,21 @@ def test_projection_is_linear_extrapolation():
     assert len(proj) == 5
     assert "extrapolation" in note.lower()
     assert proj["projected"].iloc[-1] > proj["projected"].iloc[0]
+
+
+def test_projection_starts_from_trailing_12_month_mean():
+    # Regression (2026-11-15): the projection used to start from the last
+    # month's value, so a December (winter) value anchored the whole 10-year
+    # line. With 59 months at 20.0 and a final month of 0.0, the trailing
+    # 12-month mean is (11 * 20 + 0) / 12 = 18.33 — the projection must
+    # start near that, never at the last month's 0.0.
+    dates = pd.date_range("2000-01-01", periods=60, freq="MS")
+    monthly = pd.DataFrame({"date": dates, "x": [20.0] * 59 + [0.0]})
+    trend = analyze_trend(monthly, "x")
+    proj, note = project_trend(monthly, "x", trend, years_ahead=5)
+    assert len(proj) == 5
+    assert 17.5 < proj["projected"].iloc[0] < 19.5
+    assert "12-month mean" in note
 
 
 def test_assistant_answers_only_from_context():
