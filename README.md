@@ -1,10 +1,10 @@
 # EARTHWISE AI — Premium Rebuild (2026-11-14)
 
-> **Start here for the hackathon demo:** see [`REBUILD_NOTES.md`](REBUILD_NOTES.md) — what changed, what was tested, and what credentials you need (answer: none, except optionally `OPEN_METEO_API_KEY` for commercial weather use).
+> **Start here for the hackathon demo:** see [`docs/REBUILD_NOTES.md`](docs/REBUILD_NOTES.md) — what changed, what was tested, and what credentials you need (answer: none, except optionally `OPEN_METEO_API_KEY` for commercial weather use).
 >
-> **Run it:** `pip install -r requirements.txt && streamlit run app/main.py` — full instructions in REBUILD_NOTES.md.
-> **New in this rebuild:** 7-page premium dashboard (Overview · Climate Analytics · Air Quality · Weather & Maps · AI Assistant · Risk & Outlook · Data & Downloads), live CAMS air quality (US AQI gauge, PM2.5/PM10, 24 h chart), transparent risk screening, 10-year Sen-slope projection, evidence-bound AI assistant, multi-city comparison, responsive mobile layout, error handling + loading states on every live call.
-> **Verified 2026-11-14:** 11/11 pytest passed, Streamlit HTTP 200, live NASA POWER / Open-Meteo / CAMS calls working. Lahore demo data included in `data/raw/` (T2M 2015–2025, 100% coverage). Honest result from that run: Lahore T2M trend −1.34 °C/decade, p = 0.52 (not significant) — do not claim warming from this period/test.
+> **Run it:** `pip install -r requirements.txt && streamlit run app/main.py` — full instructions in docs/REBUILD_NOTES.md.
+> **New in this rebuild:** 8-page premium dashboard (Overview · Climate Analytics · Air Quality · Weather & Maps · Daily Advisory · AI Assistant · Risk & Outlook · Data & Downloads), live CAMS air quality (US AQI gauge, PM2.5/PM10, 24 h chart), transparent risk screening, 10-year Sen-slope projection from the trailing 12-month mean, evidence-bound AI assistant, multi-city comparison, responsive mobile layout, error handling + loading states on every live call.
+> **Verified 2026-11-15:** 163/163 pytest passed, Streamlit HTTP 200, live NASA POWER / Open-Meteo / CAMS calls working. The 2 previously flaky AppTest tests (map tab + crop guide in tests/test_new_features_apptest.py, Open-Meteo HTTP 429 rate-limiting this VM's IP) passed on this run. Lahore demo data included in `data/raw/` (T2M 2015–2025, 100% coverage). Honest result from that run: Lahore T2M trend −1.34 °C/decade, p = 0.52 (not significant) — do not claim warming from this period/test.
 
 ---
 # EARTHWISE AI — The Intelligent Earth Trend Observatory
@@ -15,7 +15,7 @@ EARTHWISE AI is a Pakistan-first climate data explorer. It retrieves historical 
 
 ## Current MVP features
 
-- Searchable directory of 101 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
+- Searchable directory of 172 mapped urban centres across Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan and Azad Jammu & Kashmir. Coordinates are approximate city-centre points for NASA POWER grid extraction. This is not the complete set of 657 urban localities recorded by the PBS 2023 Census; locality names and validated point coordinates are separate data tasks.
 - PBS 2023 Census reference: [National Census Report](https://www.pbs.gov.pk/sites/default/files/population/2023/reports/National%20Census%20Report-2023.pdf) and [Table 2 — Urban Localities](https://www.pbs.gov.pk/wp-content/uploads/census_tables/tables/table_2_national.pdf).
 - Seven NASA POWER variables: mean, maximum and minimum 2 m air temperature; relative humidity; corrected precipitation; 10 m wind speed; and all-sky surface shortwave irradiance.
 - Province/region filtering, searchable city selection, a Pakistan-wide model-weather map with air temperature, apparent temperature, rainfall, humidity and wind layers, a ranked apparent-temperature screening table, and a textured, rotatable 3D Earth globe with city markers.
@@ -77,6 +77,10 @@ The app fetches NASA POWER data when a user presses the fetch button, so the dep
 
 - `app/main.py`: Streamlit interface
 - `src/regions.py`: Pakistan city coordinates and supported variables
+- `src/air_quality.py`: CAMS air quality (US AQI bands, dominant pollutant)
+- `src/advisory.py`: Daily Advisory — health verdict, farmer advisory, rain warning, crop guide, body strain, best hours
+- `src/risk.py`: risk screening + 10-year Sen-slope projection from the trailing 12-month mean
+- `src/ai_assistant.py`: evidence-bound assistant (rule-based, no LLM)
 - `src/nasa_power.py`: NASA POWER daily API client and local CSV/metadata saving
 - `src/cleaning.py`: missing-value handling and monthly aggregation
 - `src/statistics.py`: Kendall tau and Sen's slope
