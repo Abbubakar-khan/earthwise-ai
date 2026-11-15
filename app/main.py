@@ -231,7 +231,9 @@ if "_map_city_target" in st.session_state:
     _map_target = st.session_state.pop("_map_city_target")
     st.session_state["City"] = _map_target
     st.session_state["city_main"] = _map_target
-    st.session_state["Province / Region"] = "All regions"
+    # The province filter follows the picked city (instead of resetting to
+    # "All regions") so the filter always matches the city on screen.
+    st.session_state["Province / Region"] = REGIONS.get(_map_target, {}).get("province", "All regions")
     st.session_state["geo"] = None
 
 def _on_sidebar_city_change():
@@ -239,10 +241,12 @@ def _on_sidebar_city_change():
     st.session_state["city_main"] = st.session_state["City"]
 
 def _on_main_city_change():
-    # Keep the sidebar picker in sync with the main-area picker, and reset
-    # the province filter so the picked city is always in its options.
-    st.session_state["City"] = st.session_state["city_main"]
-    st.session_state["Province / Region"] = "All regions"
+    # Keep the sidebar picker in sync with the main-area picker, and move
+    # the province filter to the picked city's province (instead of resetting
+    # to "All regions") so the filter always matches the city on screen.
+    _picked = st.session_state["city_main"]
+    st.session_state["City"] = _picked
+    st.session_state["Province / Region"] = REGIONS.get(_picked, {}).get("province", "All regions")
 
 def _request_geo():
     # "Use my location" tapped: arm a fresh detection. geo_attempted is
@@ -287,7 +291,7 @@ def _apply_detected_location(latitude, longitude):
 
     Exact coords are kept for live weather/AQI; climate history uses the
     matched catalogue city. Points both pickers at the matched city (the
-    province filter is reset so the city is always in the sidebar options).
+    province filter follows the detected city so it stays in the sidebar options).
     Called before the sidebar widgets are created, so they adopt it.
     """
     try:
@@ -298,7 +302,7 @@ def _apply_detected_location(latitude, longitude):
     st.session_state["geo"] = resolved
     st.session_state["geo_attempted"] = True
     st.session_state["geo_request"] = False
-    st.session_state["Province / Region"] = "All regions"
+    st.session_state["Province / Region"] = REGIONS.get(resolved["city"], {}).get("province", "All regions")
     st.session_state["City"] = resolved["city"]
     st.session_state["city_main"] = resolved["city"]
     return True
@@ -360,6 +364,14 @@ with st.sidebar:
         st.warning("No matching city. Showing all cities — try another spelling or region.")
         city_options = sorted(REGIONS)
     default_city = "Lahore" if "Lahore" in city_options else city_options[0]
+    # Keep the City widget value valid: changing the province filter or the
+    # search can exclude the previously picked city. Streamlit would silently
+    # snap it back to the default; set it explicitly (this runs before the
+    # City widget is created, so the assignment is legal) so the city on
+    # screen is always one the filter/search actually allows.
+    if st.session_state.get("City") not in city_options:
+        st.session_state["City"] = default_city
+        st.session_state["city_main"] = default_city
     city = st.selectbox("City", city_options, index=city_options.index(default_city),
                         key="City", on_change=_on_sidebar_city_change)
     st.caption(f"{REGIONS[city]['province']} · {REGIONS[city]['latitude']:.4f}° N, {REGIONS[city]['longitude']:.4f}° E")
@@ -422,8 +434,14 @@ with _loc_c2:
     _main_options = sorted(REGIONS)
     if _main_search.strip():
         _main_options = [c for c in _main_options if _main_search.casefold() in c.casefold()]
-    if not _main_options or city not in _main_options:
+    if not _main_options:
         _main_options = sorted(REGIONS)
+    # Keep the current city in the list: without it, the keyed picker would
+    # silently snap back to the default whenever the search excludes the
+    # current city, and the search would look broken. Matches stay first;
+    # the current city sits at the end until the visitor picks a match.
+    if city not in _main_options:
+        _main_options = _main_options + [city]
     st.selectbox("City", _main_options, index=_main_options.index(city),
                  key="city_main", on_change=_on_main_city_change, label_visibility="collapsed")
 with _loc_c3:
@@ -762,8 +780,8 @@ elif page == "Air Quality":
     with g1:
         if isinstance(us_aqi, (int, float)):
             gauge = go.Figure(go.Indicator(mode="gauge+number", value=float(us_aqi), title={"text": f"US AQI — {aqi['aqi_label']}", "font": {"color": "#eef6f9", "size": 15}},
-                gauge={"axis": {"range": [0, 300], "tickcolor": "#9db2c0"}, "bar": {"color": aqi["aqi_colour"]},
-                       "steps": [{"range": [0, 50], "color": "#123527"}, {"range": [50, 100], "color": "#3d3410"}, {"range": [100, 150], "color": "#3d2210"}, {"range": [150, 200], "color": "#3d1215"}, {"range": [200, 300], "color": "#2c0f2e"}],
+                gauge={"axis": {"range": [0, 500], "tickcolor": "#9db2c0"}, "bar": {"color": aqi["aqi_colour"]},
+                       "steps": [{"range": [0, 50], "color": "#123527"}, {"range": [50, 100], "color": "#3d3410"}, {"range": [100, 150], "color": "#3d2210"}, {"range": [150, 200], "color": "#3d1215"}, {"range": [200, 300], "color": "#2c0f2e"}, {"range": [300, 500], "color": "#3d0a12"}],
                        "threshold": {"line": {"color": "#fff", "width": 3}, "value": float(us_aqi)}}))
             gauge.update_layout(paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#b7cbd9"), height=300, margin=dict(l=10, r=10, t=30, b=10))
             st.plotly_chart(gauge, use_container_width=True, config={"displayModeBar": False})
@@ -813,7 +831,14 @@ elif page == "Weather & Maps":
             st.info("7-day forecast details are unavailable.")
         hourly = forecast.get("hourly") or {}
         try:
-            hdf = pd.DataFrame({"Time": pd.to_datetime(hourly.get("time", [])), "Temperature (°C)": hourly.get("temperature_2m", [])}).dropna()
+            # Build defensively: a single bad value or uneven arrays used to
+            # kill the whole chart (".dropna()" on mismatched lengths). Coerce
+            # both sides and truncate to the shorter one; only a truly empty
+            # series still raises.
+            _htimes = pd.to_datetime(hourly.get("time", []), errors="coerce")
+            _htemps = pd.to_numeric(pd.Series(hourly.get("temperature_2m", [])), errors="coerce")
+            _n = min(len(_htimes), len(_htemps))
+            hdf = pd.DataFrame({"Time": _htimes[:_n], "Temperature (°C)": _htemps[:_n]}).dropna()
             if hdf.empty:
                 raise ValueError("No hourly temperature values were returned.")
             hfig = px.line(hdf, x="Time", y="Temperature (°C)")
