@@ -43,3 +43,28 @@ def test_trend_answer_keeps_honest_significance_wording():
     ans = answer_question("trend", _trend_ctx())
     assert "not significant" in ans
     assert "-1.34" in ans or "-1.337" in ans
+
+
+def _weather_ctx():
+    return {
+        "city": "Lahore",
+        "weather": {"temperature_2m": 19.4, "apparent_temperature": 20.0,
+                    "relative_humidity_2m": 69, "wind_speed_10m": 5.0,
+                    "precipitation": 0.0, "condition_text": "Clear sky"},
+        "forecast_summary": "Sat 15 Nov: 27°/14°C, rain chance 10%; Sun 16 Nov: 26°/13°C, rain chance 20%",
+    }
+
+
+def test_rain_today_goes_to_forecast_not_current_weather():
+    # Regression (2026-11-15): "today" matched the weather branch first, so
+    # "Will it rain today?" was answered with current conditions and never
+    # reached the forecast branch (now checked first).
+    ans = answer_question("Will it rain today?", _weather_ctx())
+    assert "7-day model forecast" in ans
+    assert "right now" not in ans
+
+
+def test_weather_today_still_gets_current_conditions():
+    ans = answer_question("What is the weather today?", _weather_ctx())
+    assert "right now" in ans
+    assert "7-day model forecast" not in ans
