@@ -94,7 +94,12 @@ def project_trend(monthly, variable, trend, years_ahead=10):
     if last.empty:
         return pd.DataFrame(), "No valid monthly observations to project from."
     last_date = pd.to_datetime(last["date"].iloc[-1])
-    last_val = float(last[variable].iloc[-1])
+    # Start from the trailing 12-month mean (the last full year), NOT the
+    # last month's value: a December (winter) or June (summer) value would
+    # anchor the whole 10-year line at a seasonal extreme instead of the
+    # annual level. With fewer than 12 months, use whatever is available.
+    trailing = last.tail(12)
+    last_val = float(trailing[variable].mean())
     slope_year = float(trend["sen_slope_per_year"])
     lo, hi = trend.get("slope_ci95_per_year", [slope_year, slope_year])
     rows = []
@@ -107,6 +112,6 @@ def project_trend(monthly, variable, trend, years_ahead=10):
             "high_95": last_val + float(hi) * y,
         })
     note = (f"Straight-line extrapolation of Sen's slope "
-            f"({slope_year:+.4g} per year) from the last observed month "
-            f"({last_date.date()}, {last_val:.2f}). Not a climate-model projection.")
+            f"({slope_year:+.4g} per year) from the trailing 12-month mean "
+            f"({last_val:.2f}, ending {last_date.date()}). Not a climate-model projection.")
     return pd.DataFrame(rows), note
