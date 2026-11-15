@@ -22,6 +22,15 @@ def answer_question(question: str, ctx: dict) -> str:
     if not q:
         return "Ask me about the weather, air quality, climate trend, anomalies or risk for the selected city — I answer from the live data loaded on this page."
 
+    # --- forecast (checked BEFORE weather: "will it rain today?" contains
+    # "today", which the weather branch also matches — rain/tomorrow questions
+    # must reach the forecast, not the current conditions) ---
+    if any(w in q for w in ("forecast", "tomorrow", "next week", "rain")):
+        f = ctx.get("forecast_summary")
+        if not f:
+            return f"I don't have a forecast loaded for {city} — open the Weather page. Forecasts are model products and can change."
+        return f"**{city} — 7-day model forecast:** {f}"
+
     # --- weather / now ---
     if any(w in q for w in ("weather", "temperature now", "how hot", "how cold", "right now", "today")):
         w = ctx.get("weather") or {}
@@ -77,13 +86,6 @@ def answer_question(question: str, ctx: dict) -> str:
                 f"air quality: {r.get('scores', {}).get('air_quality_label', '—')}, "
                 f"current heat: {r.get('scores', {}).get('heat_now_label', '—')}. "
                 f"This is a screening signal only — for warnings use PMD and health authorities.")
-
-    # --- forecast ---
-    if any(w in q for w in ("forecast", "tomorrow", "next week", "rain")):
-        f = ctx.get("forecast_summary")
-        if not f:
-            return f"I don't have a forecast loaded for {city} — open the Weather page. Forecasts are model products and can change."
-        return f"**{city} — 7-day model forecast:** {f}"
 
     # --- data / sources ---
     if any(w in q for w in ("source", "data", "where", "nasa", "open-meteo")):
